@@ -3,6 +3,25 @@
 This document is written for the developer or AI agent performing the
 integration. Follow it and the port is mechanical.
 
+## Getting Splashline and staying updated
+
+Splashline's home is <https://github.com/ArtofNor/splashline>. The site
+consuming it should treat that repo as upstream:
+
+1. **Install:** clone the latest tag and copy `src/` into the site
+   (`git clone --branch v1.0.0 https://github.com/ArtofNor/splashline`).
+   Record which tag you copied (a one-line note in the site repo is enough).
+2. **Update:** re-copy `src/` from the newer tag, re-run the behavior tests
+   at the bottom of this document, done. Assets (`editor.js`, the paper CSS)
+   only need re-copying when a release notes say so.
+3. **Never patch the site's copy of `src/`.** If the site needs a parser or
+   renderer fix, make it in the Splashline repo, tag it, then update the
+   site from the new tag. A locally patched copy silently forks and the two
+   drift apart.
+
+If the site later wants dependency management, Splashline can ship a
+`composer.json` and be required through a VCS repository entry; ask for it.
+
 ## What this app is
 
 A screenplay + comic-script writing tool. Two file formats, one pipeline each:
