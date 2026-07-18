@@ -140,7 +140,16 @@ main { padding: 2rem 1rem; }
   box-shadow: 0 4px 24px rgba(0,0,0,0.4);
 }
 /* A paginated preview page: exactly letter-sized (padding included). */
-.page { height: 11in; }
+.page { height: 11in; position: relative; }
+
+/* Page number in the top margin: 0.5in from the paper's top edge, flush with
+   the text block's right margin. Lives inside the 1in top pad, so it never
+   costs the paginator a line. */
+.page .page-num {
+  position: absolute;
+  top: 0.5in;
+  right: var(--page-pad-right);
+}
 
 /* Typography shared by every script surface. */
 .title-page,
