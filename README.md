@@ -24,16 +24,25 @@ cd splashline
 php -S 127.0.0.1:8791 -t public
 ```
 
-Open <http://127.0.0.1:8791>. Requires PHP 8.2+. That is the whole setup.
+Open <http://127.0.0.1:8791>. Requires PHP 8.2+ with mbstring (bundled in
+most builds). That is the whole setup.
+
+Run the tests the same way, no dependencies:
+
+```bash
+php tests/run.php
+```
 
 ## Screenplays (.fountain)
 
 Standard Fountain: scene headings, action, character cues, parentheticals,
-dialogue, transitions, dual dialogue markers, centered text, lyrics, page
-breaks, sections, synopses, notes, boneyard, and inline emphasis. The
-preview computes pagination in PHP (54 lines per page at exact Courier
-metrics), so page count on screen equals page count in print, and one page
-still roughly equals one minute.
+dialogue, transitions, dual dialogue rendered side by side, centered text,
+lyrics, page breaks, sections, synopses, notes, boneyard, and inline
+emphasis. The preview computes pagination in PHP (54 lines per page at
+exact Courier metrics), so page count on screen equals page count in print,
+and one page still roughly equals one minute. Text is measured in display
+columns, not bytes, so scripts with Lao, Thai, or other non-Latin dialogue
+paginate correctly, and titles in any script become valid filenames.
 
 ## Comic scripts (.md)
 

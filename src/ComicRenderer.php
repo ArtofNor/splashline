@@ -134,7 +134,9 @@ final class ComicRenderer
 
                 foreach ($panel['beats'] as $beat) {
                     $balloonNo++;
-                    $words = str_word_count($beat['text']);
+                    // Whitespace-separated tokens, not str_word_count (which
+                    // is ASCII-biased and undercounts non-Latin text).
+                    $words = count(preg_split('/\s+/u', trim($beat['text']), -1, PREG_SPLIT_NO_EMPTY) ?: []);
                     $long = $beat['type'] !== 'sfx' && $words > self::LONG_BALLOON_WORDS;
 
                     $out .= '<div class="beat ' . $beat['type'] . ($long ? ' long' : '') . '">';

@@ -32,12 +32,23 @@ final class Renderer
     ];
 
     /**
+     * Column widths inside a dual-dialogue column (two ~2.9in columns with a
+     * 0.2in gap). Must match the .dual-col CSS indents.
+     */
+    private const DUAL_WIDTHS = [
+        'character'     => 19, // 1in indent inside the column
+        'parenthetical' => 22, // 0.7in
+        'dialogue'      => 23, // 0.4in left + 0.2in right
+    ];
+
+    /**
      * Emits the script as discrete US-Letter pages, each holding the same
      * line-per-line structure the live editor uses — so geometry matches the
      * edit surface, but broken into real sheets. Preview's extras: emphasis is
-     * applied, Fountain markup is already stripped by the parser, and outline
-     * synopses are private notes — hidden; sections render dimmed so that
-     * comics-written-as-screenplays keep their page/panel structure readable.
+     * applied, Fountain markup is already stripped by the parser, dual
+     * dialogue renders side by side, and outline synopses are private notes —
+     * hidden; sections render dimmed so that comics-written-as-screenplays
+     * keep their page/panel structure readable.
      *
      * @param array{title: array<string, list<string>>, tokens: list<array<string, mixed>>} $parsed
      */
@@ -46,15 +57,32 @@ final class Renderer
         $out = $this->titlePageHtml($parsed['title']);
         $out .= "<div class=\"screenplay\">\n";
 
-        foreach ($this->paginate($parsed['tokens']) as $page) {
+        $tokens = $this->annotateDual($parsed['tokens']);
+
+        foreach ($this->paginate($tokens) as $page) {
             $out .= "<div class=\"page sheet\">\n";
-            foreach ($page as $t) {
-                if ($t['type'] === 'blank') {
-                    $out .= "<div class=\"ln blank\"></div>\n";
-                } else {
-                    $cls = str_replace('_', '-', $t['type']);
-                    $out .= '<div class="ln ' . $cls . '">' . $this->inline((string) $t['text']) . "</div>\n";
+            $n = count($page);
+            for ($i = 0; $i < $n; $i++) {
+                $t = $page[$i];
+
+                if (isset($t['dualPair'])) {
+                    // Collect the whole pair (contiguous within a page) and
+                    // emit it as one two-column row.
+                    $pair = $t['dualPair'];
+                    $cols = ['L' => '', 'R' => ''];
+                    while ($i < $n && ($page[$i]['dualPair'] ?? null) === $pair) {
+                        $cols[$page[$i]['dualSide']] .= $this->lineHtml($page[$i]);
+                        $i++;
+                    }
+                    $i--;
+                    $out .= "<div class=\"dual-row\">"
+                        . '<div class="dual-col">' . $cols['L'] . '</div>'
+                        . '<div class="dual-col">' . $cols['R'] . '</div>'
+                        . "</div>\n";
+                    continue;
                 }
+
+                $out .= $this->lineHtml($t);
             }
             $out .= "</div>\n";
         }
@@ -63,10 +91,86 @@ final class Renderer
         return $out;
     }
 
+    /** One token as one .ln line div. */
+    private function lineHtml(array $t): string
+    {
+        if ($t['type'] === 'blank') {
+            return "<div class=\"ln blank\"></div>\n";
+        }
+        $cls = str_replace('_', '-', $t['type']);
+
+        return '<div class="ln ' . $cls . '">' . $this->inline((string) $t['text']) . "</div>\n";
+    }
+
+    /**
+     * Mark dual-dialogue pairs: a character cue flagged with '^' pairs with
+     * the speech immediately before it. Both speeches get a shared dualPair
+     * id and an L/R side; the blank line(s) between them are marked to drop
+     * (the two speeches sit beside each other, not above each other).
+     *
+     * @param list<array<string, mixed>> $tokens
+     * @return list<array<string, mixed>>
+     */
+    private function annotateDual(array $tokens): array
+    {
+        $n = count($tokens);
+        $pair = 0;
+
+        for ($i = 0; $i < $n; $i++) {
+            if ($tokens[$i]['type'] !== 'character' || empty($tokens[$i]['dual'])) {
+                continue;
+            }
+
+            // The right speech: this cue plus its dialogue lines.
+            $rEnd = $i;
+            for ($j = $i + 1; $j < $n && in_array($tokens[$j]['type'], ['parenthetical', 'dialogue'], true); $j++) {
+                $rEnd = $j;
+            }
+
+            // The left speech: scan back over blanks to the previous speech.
+            $k = $i - 1;
+            $dropped = [];
+            while ($k >= 0 && $tokens[$k]['type'] === 'blank') {
+                $dropped[] = $k;
+                $k--;
+            }
+            if ($k < 0 || !in_array($tokens[$k]['type'], ['parenthetical', 'dialogue'], true)) {
+                continue; // No speech to pair with; render as a normal cue.
+            }
+            $lEnd = $k;
+            while ($k >= 0 && in_array($tokens[$k]['type'], ['parenthetical', 'dialogue'], true)) {
+                $k--;
+            }
+            if ($k < 0 || $tokens[$k]['type'] !== 'character') {
+                continue;
+            }
+
+            $pair++;
+            for ($m = $k; $m <= $lEnd; $m++) {
+                $tokens[$m]['dualPair'] = $pair;
+                $tokens[$m]['dualSide'] = 'L';
+            }
+            foreach ($dropped as $d) {
+                $tokens[$d]['dualDrop'] = true;
+            }
+            for ($m = $i; $m <= $rEnd; $m++) {
+                $tokens[$m]['dualPair'] = $pair;
+                $tokens[$m]['dualSide'] = 'R';
+            }
+            $i = $rEnd;
+        }
+
+        return $tokens;
+    }
+
     /**
      * Split tokens into pages of at most LINES_PER_PAGE visual lines.
      * Widow/orphan control: a scene heading or character cue is pushed to the
      * next page rather than stranded at the bottom with nothing under it.
+     * A dual-dialogue pair is atomic: it never splits across a page break.
+     * Its height is counted as the sum of both columns (the render needs only
+     * the taller column) — deliberately conservative, so pages may run a line
+     * or two short but can never overflow.
      *
      * @param list<array<string, mixed>> $tokens
      * @return list<list<array<string, mixed>>>
@@ -85,7 +189,9 @@ final class Renderer
             $used = 0;
         };
 
-        foreach ($tokens as $t) {
+        $n = count($tokens);
+        for ($i = 0; $i < $n; $i++) {
+            $t = $tokens[$i];
             $type = $t['type'];
 
             if ($type === 'synopsis') {
@@ -99,6 +205,40 @@ final class Renderer
                 $break();
                 continue;
             }
+            if (!empty($t['dualDrop'])) {
+                continue; // Blank swallowed by a dual-dialogue pairing.
+            }
+
+            // A dual pair moves as one unit.
+            if (isset($t['dualPair'])) {
+                $pairId = $t['dualPair'];
+                $unit = [];
+                $need = 0;
+                for ($j = $i; $j < $n; $j++) {
+                    if (!empty($tokens[$j]['dualDrop'])) {
+                        continue;
+                    }
+                    if (($tokens[$j]['dualPair'] ?? null) !== $pairId) {
+                        break;
+                    }
+                    $unit[] = $tokens[$j];
+                    $need += $this->visualLines($tokens[$j]);
+                }
+                $i = $j - 1;
+
+                if ($used > 0 && $used + $need > self::LINES_PER_PAGE) {
+                    if (($page[count($page) - 1]['type'] ?? '') === 'blank') {
+                        array_pop($page);
+                    }
+                    $break();
+                }
+                foreach ($unit as $u) {
+                    $page[] = $u;
+                }
+                $used += $need;
+                continue;
+            }
+
             if ($type === 'blank') {
                 if ($used === 0) {
                     continue; // No blank leading a page (or doubled by omissions above).
@@ -143,9 +283,62 @@ final class Renderer
         if ($text === '') {
             return 1;
         }
-        $width = self::WIDTHS[$t['type']] ?? 60;
+        $width = isset($t['dualPair'])
+            ? (self::DUAL_WIDTHS[$t['type']] ?? 23)
+            : (self::WIDTHS[$t['type']] ?? 60);
 
-        return count(explode("\n", wordwrap($text, $width, "\n", true)));
+        return $this->wrappedLines($text, $width);
+    }
+
+    /**
+     * Greedy word wrap in display columns, not bytes. PHP's wordwrap counts
+     * bytes, which triples the apparent width of UTF-8 text (Lao, Thai, and
+     * friends) and paginates it wrongly. Widths here are measured with
+     * combining marks removed (Lao vowel and tone marks take no column) via
+     * mb_strwidth, which also counts East Asian wide characters as two.
+     */
+    private function wrappedLines(string $text, int $width): int
+    {
+        $words = preg_split('/\s+/u', trim($text), -1, PREG_SPLIT_NO_EMPTY);
+        if ($words === false || $words === []) {
+            return 1;
+        }
+
+        $lines = 1;
+        $col = 0;
+        foreach ($words as $word) {
+            $w = self::displayWidth($word);
+
+            if ($w > $width) {
+                // A word longer than the column hard-breaks (the CSS uses
+                // overflow-wrap: break-word to match).
+                if ($col > 0) {
+                    $lines++;
+                }
+                $full = intdiv($w - 1, $width); // Extra lines beyond the first.
+                $lines += $full;
+                $col = $w - $full * $width;
+                continue;
+            }
+            if ($col === 0) {
+                $col = $w;
+            } elseif ($col + 1 + $w <= $width) {
+                $col += 1 + $w;
+            } else {
+                $lines++;
+                $col = $w;
+            }
+        }
+
+        return $lines;
+    }
+
+    /** Display columns of a string: combining marks are zero-width. */
+    private static function displayWidth(string $s): int
+    {
+        $s = preg_replace('/[\p{Mn}\p{Me}\p{Cf}]/u', '', $s) ?? $s;
+
+        return mb_strwidth($s, 'UTF-8');
     }
 
     /** The text as it prints: notes removed, emphasis markers stripped. */

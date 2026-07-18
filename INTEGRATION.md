@@ -28,8 +28,9 @@ A screenplay + comic-script writing tool. Two file formats, one pipeline each:
 
 - `.fountain` screenplays: `src/FountainParser.php` -> `src/Renderer.php`
 - Sahtu comic scripts (Markdown headings): `src/ComicParser.php` -> `src/ComicRenderer.php`
-- Detection is content-first (`sniff_comic()` in `public/index.php`);
-  extension is only a fallback. Port that function with the routing.
+- Detection is content-first (`Scriptwriter\Support::sniffComic()`);
+  extension is only a fallback. `Support` also owns filename sanitising and
+  path validation; `public/index.php` only aliases it.
 
 ## The golden rule
 
@@ -88,6 +89,10 @@ The comic view has no line-count math (sheets are `min-height: 11in`) and
 tolerates more restyling, but keep Courier for the manuscript look.
 
 ## Behaviors to preserve (test these after porting)
+
+The parser/renderer layer has an executable suite: `php tests/run.php`
+(zero dependencies). Run it against your copied `src/` after porting; the
+list below covers the shell behaviors the suite cannot reach.
 
 1. A comic script routes to the comic viewer regardless of extension
    (content sniffing), and vice versa.

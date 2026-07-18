@@ -5,76 +5,41 @@ use Scriptwriter\ComicParser;
 use Scriptwriter\ComicRenderer;
 use Scriptwriter\FountainParser;
 use Scriptwriter\Renderer;
+use Scriptwriter\Support;
 
 require __DIR__ . '/../src/FountainParser.php';
 require __DIR__ . '/../src/Renderer.php';
 require __DIR__ . '/../src/ComicParser.php';
 require __DIR__ . '/../src/ComicRenderer.php';
+require __DIR__ . '/../src/Support.php';
 
 const SCRIPTS_DIR = __DIR__ . '/../scripts';
 
-/** Extension signal only: .md leans comic, .fountain leans screenplay. */
+// Detection and filename logic lives in Scriptwriter\Support (shared with the
+// test suite); these are thin local aliases.
 function is_comic(string $name): bool
 {
-    return (bool) preg_match('/\.md$/i', $name);
+    return Support::isComicName($name);
 }
 
-/**
- * Content signal. The Sahtu comic format is simultaneously valid Markdown and
- * valid Fountain (Fountain sections ARE Markdown headings), so the extension
- * can't be trusted alone. These three signatures appear in comic scripts and
- * never in screenplays: a page slug as H1, a bold panel label as H2, or a
- * tagged beat as H3. Returns null when the content says nothing either way.
- */
 function sniff_comic(string $content): ?bool
 {
-    if (preg_match('/^#\s+(INT|EXT|EST|I\/E)[.\s]/mi', $content)
-        || preg_match('/^##\s+\*\*/m', $content)
-        || preg_match('/^###\s+[^:\n]+:/m', $content)
-    ) {
-        return true;
-    }
-    return null;
+    return Support::sniffComic($content);
 }
 
-/** Content-first kind detection, extension as fallback. */
 function is_comic_file(string $name, string $content): bool
 {
-    return sniff_comic($content) ?? is_comic($name);
+    return Support::isComicFile($name, $content);
 }
 
-/** Resolve a user-supplied name to a safe path inside SCRIPTS_DIR, or null. */
 function script_path(string $name): ?string
 {
-    $base = basename($name);                       // Strip any directory parts.
-    if (!preg_match('/^[A-Za-z0-9 _\-]+\.(fountain|md)$/', $base)) {
-        return null;
-    }
-    return SCRIPTS_DIR . '/' . $base;
+    return Support::scriptPath(SCRIPTS_DIR, $name);
 }
 
-/**
- * Turn whatever the user typed (a title, really) into a safe filename.
- * Rather than reject titles with apostrophes or colons, we sanitise:
- * "Act 1: Dawn" -> "Act-1-Dawn.fountain", "Night's End" -> "Nights-End.fountain".
- * An explicitly typed ".md" or ".fountain" is honoured; otherwise the
- * extension follows what the content sniffed as ($comicDefault).
- * Returns null only if nothing usable remains (e.g. title was all punctuation).
- */
 function safe_filename(string $input, bool $comicDefault = false): ?string
 {
-    $name = trim($input);
-    $ext = match (true) {
-        is_comic($name)                              => '.md',
-        (bool) preg_match('/\.fountain$/i', $name)   => '.fountain',
-        default                                      => $comicDefault ? '.md' : '.fountain',
-    };
-    $name = preg_replace('/\.(fountain|md)$/i', '', $name) ?? $name; // Drop extension; re-added below.
-    $name = str_replace(["'", "\u{2019}"], '', $name);            // "Night's" -> "Nights", not "Night-s".
-    $name = preg_replace('/[^A-Za-z0-9]+/', '-', $name) ?? $name; // Any other run -> single hyphen.
-    $name = trim($name, '-');
-
-    return $name === '' ? null : $name . $ext;
+    return Support::safeFilename($input, $comicDefault);
 }
 
 /** @return list<string> */
