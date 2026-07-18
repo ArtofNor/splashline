@@ -360,7 +360,10 @@ final class Renderer
         $line = static fn (string $key): string =>
             isset($title[$key]) ? implode('<br>', array_map('htmlspecialchars', $title[$key])) : '';
 
-        $html = "<div class=\"title-page sheet\">\n";
+        // The main block sits in a wrapper with auto vertical margins so it
+        // truly centers; a bare margin-top:auto on the footer would swallow
+        // all the free space and pin the title to the top of the page.
+        $html = "<div class=\"title-page sheet\">\n<div class=\"tp-main\">\n";
         if ($t = $line('title')) {
             $html .= '<h1 class="tp-title">' . $t . "</h1>\n";
         }
@@ -373,6 +376,7 @@ final class Renderer
         if ($t = $line('source')) {
             $html .= '<p class="tp-source">' . $t . "</p>\n";
         }
+        $html .= "</div>\n";
         $footer = array_filter([$line('draft date'), $line('contact'), $line('copyright')]);
         if ($footer !== []) {
             $html .= '<p class="tp-footer">' . implode('<br>', $footer) . "</p>\n";

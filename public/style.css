@@ -150,12 +150,14 @@ main { padding: 2rem 1rem; }
   text-align: center;
   display: flex;
   flex-direction: column;
-  justify-content: center;
 }
+/* Auto margins on both sides of the main block center it in the space above
+   the footer (mirrors .cc-main on the comic cover). */
+.tp-main { margin: auto 0; }
 .tp-title { font-size: 12pt; font-weight: normal; text-transform: uppercase; text-decoration: underline; margin: 0 0 2em; }
 .tp-credit { margin: 0.5em 0; }
-.tp-author { margin: 0.5em 0 4em; }
-.tp-footer { margin-top: auto; font-size: 12pt; }
+.tp-author { margin: 0.5em 0; }
+.tp-footer { font-size: 12pt; }
 
 /* One line of the script — shared by the live editor and Preview, so both
    surfaces have identical geometry. Spacing comes from the source's blank
