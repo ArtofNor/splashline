@@ -59,8 +59,14 @@ final class Renderer
 
         $tokens = $this->annotateDual($parsed['tokens']);
 
-        foreach ($this->paginate($tokens) as $page) {
+        foreach ($this->paginate($tokens) as $pageNo => $page) {
             $out .= "<div class=\"page sheet\">\n";
+            // Industry convention: the title page and first script page are
+            // unnumbered; from the second script page the number sits in the
+            // top-right margin as "2.".
+            if ($pageNo > 0) {
+                $out .= '<span class="page-num">' . ($pageNo + 1) . ".</span>\n";
+            }
             $n = count($page);
             for ($i = 0; $i < $n; $i++) {
                 $t = $page[$i];
