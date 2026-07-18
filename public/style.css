@@ -7,8 +7,13 @@
   /* One "character" of 12pt Courier ~= 0.6 * 12pt. 60 chars ~= the classic
      6-inch text block of a US-Letter screenplay page. */
   --page-width: 8.5in;
+  /* Top + bottom must sum to 2in: the paginator's 54-line count assumes the
+     9in text block that leaves on an 11in page. */
   --page-pad-top: 1in;
-  --page-pad-left: 1.5in;   /* Wider left margin for binding. */
+  --page-pad-bottom: 1in;
+  /* Wider left margin for binding (three-hole punch side) — the industry
+     standard, so screenplay sheets are intentionally not centered. */
+  --page-pad-left: 1.5in;
   /* Half a character narrower than the nominal 1in: the paginator counts
      wrapped lines in whole characters, and a line that exactly fills its
      column (e.g. 35 chars in the 35-char dialogue box) can tip onto a second
@@ -129,7 +134,7 @@ main { padding: 2rem 1rem; }
 .sheet {
   width: var(--page-width);
   margin: 0 auto 1.5rem;
-  padding: var(--page-pad-top) var(--page-pad-right) 1in var(--page-pad-left);
+  padding: var(--page-pad-top) var(--page-pad-right) var(--page-pad-bottom) var(--page-pad-left);
   background: var(--paper);
   color: var(--ink);
   box-shadow: 0 4px 24px rgba(0,0,0,0.4);
