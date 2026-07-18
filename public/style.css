@@ -1,0 +1,335 @@
+:root {
+  --paper: #fff;
+  --ink: #1a1a1a;
+  --bg: #2b2b2b;
+  --accent: #7a5cff;
+  --muted: #888;
+  /* One "character" of 12pt Courier ~= 0.6 * 12pt. 60 chars ~= the classic
+     6-inch text block of a US-Letter screenplay page. */
+  --page-width: 8.5in;
+  --page-pad-top: 1in;
+  --page-pad-left: 1.5in;   /* Wider left margin for binding. */
+  /* Half a character narrower than the nominal 1in: the paginator counts
+     wrapped lines in whole characters, and a line that exactly fills its
+     column (e.g. 35 chars in the 35-char dialogue box) can tip onto a second
+     line from float rounding alone. The 0.05in slack makes exact fits safe
+     without moving any break point (the next char still wraps). */
+  --page-pad-right: 0.95in;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: #e8e8e8;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* --- Top bar --------------------------------------------------------------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.25rem;
+  background: #1e1e1e;
+  border-bottom: 1px solid #000;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.brand { font-weight: 700; color: #fff; text-decoration: none; font-size: 1.1rem; }
+.topbar nav { display: flex; gap: 1rem; margin-left: auto; }
+.topbar nav a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+.topbar nav a:hover { text-decoration: underline; }
+
+main { padding: 2rem 1rem; }
+
+/* --- Listing --------------------------------------------------------------- */
+.listing { max-width: 640px; margin: 0 auto; }
+.listing h2 { color: #fff; }
+.listing ul { list-style: none; padding: 0; }
+.listing li {
+  padding: 0.75rem 1rem;
+  background: #333;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+}
+.listing a { color: #e8e8e8; text-decoration: none; }
+.listing a:hover { color: #fff; }
+.muted { color: var(--muted); font-size: 0.85rem; }
+.empty { color: var(--muted); }
+.kind {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  margin-left: 0.5rem;
+}
+
+/* --- Live editor ----------------------------------------------------------- */
+.write {
+  max-width: var(--page-width);
+  margin: 0 auto;
+}
+.write-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.write-bar .filename {
+  flex: 1;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #444;
+  border-radius: 6px;
+  background: #333;
+  color: #fff;
+  font-size: 0.95rem;
+}
+.status { color: var(--muted); font-size: 0.85rem; min-width: 14ch; text-align: right; }
+.status.error { color: #ff7a7a; }
+
+/* The contenteditable page. Inherits the .screenplay page look; these rules
+   style the per-line divs and mirror the rendered indents. */
+.editor-live {
+  min-height: 70vh;
+  outline: none;
+  caret-color: var(--accent);
+  line-height: 1;
+}
+.editor-live.is-empty::before {
+  content: attr(data-placeholder);
+  color: #bbb;
+  pointer-events: none;
+  position: absolute;
+}
+
+/* Editor-only: outline + structural markers, dimmed to read as metadata.
+   (Preview hides these entirely — they're the writer's private notes.) */
+.editor-live .ln.section { color: #b06a00; font-weight: bold; }
+.editor-live .ln.synopsis { color: #999; font-style: italic; }
+.editor-live .ln.page-break { color: #bbb; text-align: center; }
+
+/* Editor-only: Sahtu comic scripts (.md), classified by heading level. */
+.editor-live .ln.c-page { font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 0.2em; }
+.editor-live .ln.c-panel { font-weight: bold; }
+.editor-live .ln.c-beat { padding-left: 0.5in; }
+.editor-live .ln.c-beat-cont { padding-left: 0.75in; color: #444; }
+.editor-live .ln.c-note { color: #8a7b52; font-style: italic; }
+
+/* --- Rendered screenplay --------------------------------------------------- */
+/* A sheet of paper: US-Letter width, screenplay margins. The live editor is a
+   single continuous sheet; Preview stacks discrete 11in pages. */
+.sheet {
+  width: var(--page-width);
+  margin: 0 auto 1.5rem;
+  padding: var(--page-pad-top) var(--page-pad-right) 1in var(--page-pad-left);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+/* A paginated preview page: exactly letter-sized (padding included). */
+.page { height: 11in; }
+
+/* Typography shared by every script surface. */
+.title-page,
+.screenplay {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12pt;
+  line-height: 1;
+}
+
+.title-page {
+  height: 11in;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.tp-title { font-size: 12pt; font-weight: normal; text-transform: uppercase; text-decoration: underline; margin: 0 0 2em; }
+.tp-credit { margin: 0.5em 0; }
+.tp-author { margin: 0.5em 0 4em; }
+.tp-footer { margin-top: auto; font-size: 12pt; }
+
+/* One line of the script — shared by the live editor and Preview, so both
+   surfaces have identical geometry. Spacing comes from the source's blank
+   lines (`.ln.blank`), never from margins. Indents are relative to the text
+   block, which already starts at --page-pad-left (1.5in): standard positions
+   from the paper's left edge are character 3.7in, parenthetical 3.1in,
+   dialogue 2.5in — so the difference from that 1.5in margin goes here. */
+.screenplay .ln {
+  white-space: pre-wrap;
+  /* Exactly one line: the paginator counts 54 lines per 9in text block, which
+     only holds if a blank line is precisely 1em (12pt). Anything larger makes
+     rendered pages taller than counted and content spills off the sheet. */
+  min-height: 1em;
+}
+.screenplay .ln.scene-heading { font-weight: bold; text-transform: uppercase; }
+.screenplay .ln.character { padding-left: 2.2in; }
+.screenplay .ln.parenthetical { padding-left: 1.6in; }
+.screenplay .ln.dialogue { padding-left: 1in; padding-right: 1.5in; }
+.screenplay .ln.transition { text-align: right; text-transform: uppercase; }
+.screenplay .ln.section { font-weight: bold; color: #777; text-transform: uppercase; }
+.screenplay .ln.centered { text-align: center; }
+.screenplay .ln.lyric { font-style: italic; padding-left: 1in; }
+
+.page-break {
+  border: none;
+  border-top: 1px dashed #bbb;
+  margin: 2em 0;
+}
+
+/* --- Comic script view ------------------------------------------------------ */
+/* Comic scripts as Courier manuscript, same face as the screenplay side. One
+   sheet per comic page; speeches numbered per page for lettering. */
+.comic {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12pt;
+  line-height: 1.4;
+}
+.comic-stats {
+  max-width: var(--page-width);
+  margin: 0 auto 1rem;
+  color: var(--muted);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.85rem;
+}
+.comic .sheet { padding: 0.75in 1in; }
+/* Letter proportions: min-height so a dense page can run long rather than
+   clip, but every sheet reads as 8.5x11 paper. */
+.comic-page { min-height: 11in; }
+
+.cp-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 1.4em;
+}
+.cp-no, .cp-slug {
+  font-weight: bold;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  white-space: nowrap;
+}
+.cp-badge {
+  font-size: 0.7rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 4px;
+  padding: 0.1rem 0.45rem;
+  align-self: center;
+}
+.cp-count { margin-left: auto; color: var(--muted); font-size: 0.85em; white-space: nowrap; }
+.cp-warn {
+  font-size: 0.7rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 600;
+  color: #a33;
+  border: 1px solid #d99;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  align-self: center;
+  white-space: nowrap;
+}
+
+.panel { margin-bottom: 1.4em; }
+.panel-desc { margin: 0 0 0.7em; }
+.panel-label { text-transform: uppercase; }
+.p-badge {
+  font-size: 0.65rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #fff;
+  background: #6b6b6b;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  vertical-align: 0.1em;
+  white-space: nowrap;
+}
+.p-badge.splash { background: var(--accent); }
+
+/* A speech: "1. TAG:" at the left, the balloon text in its own column.
+   Numbering runs per page, across panels, the way letterers key balloons. */
+.beat {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  margin: 0.9em 0;
+}
+.beat-label {
+  flex: 0 0 2.2in;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+.beat-no { color: var(--muted); font-weight: normal; }
+.beat-ext { color: var(--muted); font-weight: normal; }
+.beat-text { width: 3.3in; }
+.beat-text p { margin: 0 0 0.9em; }
+.beat-text p:last-child { margin-bottom: 0; }
+.beat.sfx .beat-text { font-style: italic; letter-spacing: 0.1em; font-weight: bold; }
+.beat.caption .beat-text {
+  background: #f2f0e9;
+  border: 1px solid #ddd8c8;
+  padding: 0.1em 0.45em;
+  border-radius: 2px;
+}
+.beat-wc {
+  font-size: 0.7rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #a33;
+  border: 1px solid #d99;
+  border-radius: 4px;
+  padding: 0 0.35rem;
+  white-space: nowrap;
+}
+
+.comic-note { color: #8a7b52; font-style: italic; margin: 0.3em 0; }
+.held { color: #8a7b52; }
+
+/* The cover sheet: a letter-proportioned front page built from the preamble. */
+.comic-cover {
+  min-height: 11in;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+.cc-main { margin: auto 0; }
+.cc-title {
+  font-size: 12pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  margin: 0 0 2em;
+}
+.cc-line { margin: 0.5em 0; }
+.cc-key { color: var(--muted); }
+.cc-note { color: #8a7b52; font-style: italic; margin: 1em auto; max-width: 5in; }
+.cc-footer { margin-top: auto; }
+
+/* --- Print / PDF ----------------------------------------------------------- */
+@media print {
+  @page { size: letter; margin: 0; }
+  body { background: #fff; }
+  .topbar { display: none; }
+  main { padding: 0; }
+  .sheet {
+    margin: 0;
+    box-shadow: none;
+  }
+  .title-page,
+  .page { page-break-after: always; }
+  .comic-page { page-break-after: always; }
+  .comic-stats { display: none; }
+}
