@@ -340,7 +340,7 @@
   }
 
   // The title saves when committed (Enter or clicking away), not per
-  // keystroke — otherwise a pause mid-word would create "Moons-Pur.fountain".
+  // keystroke — otherwise a pause mid-word would create "Nights-En.fountain".
   // Enter just moves focus; the blur handler is the single save path (calling
   // save() here too fired twice and the second request tripped the 409 guard).
   filenameEl.addEventListener('input', function () { dirty = true; });

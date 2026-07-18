@@ -56,7 +56,7 @@ function script_path(string $name): ?string
 /**
  * Turn whatever the user typed (a title, really) into a safe filename.
  * Rather than reject titles with apostrophes or colons, we sanitise:
- * "Act 1: Dawn" -> "Act-1-Dawn.fountain", "Nor's Draft" -> "Nors-Draft.fountain".
+ * "Act 1: Dawn" -> "Act-1-Dawn.fountain", "Night's End" -> "Nights-End.fountain".
  * An explicitly typed ".md" or ".fountain" is honoured; otherwise the
  * extension follows what the content sniffed as ($comicDefault).
  * Returns null only if nothing usable remains (e.g. title was all punctuation).
@@ -70,7 +70,7 @@ function safe_filename(string $input, bool $comicDefault = false): ?string
         default                                      => $comicDefault ? '.md' : '.fountain',
     };
     $name = preg_replace('/\.(fountain|md)$/i', '', $name) ?? $name; // Drop extension; re-added below.
-    $name = str_replace(["'", "\u{2019}"], '', $name);            // "Nor's" -> "Nors", not "Nor-s".
+    $name = str_replace(["'", "\u{2019}"], '', $name);            // "Night's" -> "Nights", not "Night-s".
     $name = preg_replace('/[^A-Za-z0-9]+/', '-', $name) ?? $name; // Any other run -> single hyphen.
     $name = trim($name, '-');
 
@@ -123,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save'
     // Never clobber a *different* existing script. `original` is the file being
     // edited (empty when creating new); a save may only overwrite that same
     // file. file_exists is case-insensitive on macOS, so this also catches
-    // "Moon's Purpose" colliding with an existing "moons-purpose".
+    // "Night's End" colliding with an existing "nights-end".
     $original = basename((string) ($_POST['original'] ?? ''));
     if (file_exists(SCRIPTS_DIR . '/' . $name) && strcasecmp($name, $original) !== 0) {
         $fail(409, 'A script named "' . $name . '" already exists. Open it to edit, or pick a different title.');
