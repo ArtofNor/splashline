@@ -97,6 +97,20 @@ final class Renderer
         return $out;
     }
 
+    /**
+     * The paginated token groups, exactly as toHtml() lays them onto sheets —
+     * exposed so a non-paper surface (e.g. a reflowed mobile reading view) can
+     * mark real page boundaries without duplicating the pagination math. Each
+     * inner list is one page's tokens, in order.
+     *
+     * @param array{title: array<string, list<string>>, tokens: list<array<string, mixed>>} $parsed
+     * @return list<list<array<string, mixed>>>
+     */
+    public function pages(array $parsed): array
+    {
+        return $this->paginate($this->annotateDual($parsed['tokens']));
+    }
+
     /** One token as one .ln line div. */
     private function lineHtml(array $t): string
     {
