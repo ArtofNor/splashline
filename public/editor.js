@@ -296,6 +296,18 @@
       return;
     }
 
+    // Tab types a tab. The cue separator in a comic script is a literal tab,
+    // so the key has to reach the document rather than move focus. Shift+Tab
+    // is deliberately left alone: it's the way out of the editor for anyone
+    // working from the keyboard, so this never becomes a focus trap.
+    if (e.key === 'Tab' && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey
+        && !composing && isComicDoc(getText())) {
+      e.preventDefault();
+      insertMultiline('\t');
+      markDirty();
+      return;
+    }
+
     // Comic heading levels. Alt is the only modifier free on every platform:
     // Ctrl+digit and Cmd+digit are reserved by browsers for tab switching and
     // can't be preventDefault'd. e.code because Option+1 on macOS reports
