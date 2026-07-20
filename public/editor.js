@@ -431,5 +431,8 @@
 
   build(source.value);
   editor.focus();
-  placeCaret(lineDivs()[0], 0);
+  // A new script opens on its title stub, so the caret belongs after "Title: "
+  // rather than in front of it. An existing script opens at the very top.
+  var firstLine = lineDivs()[0];
+  placeCaret(firstLine, originalEl.value ? 0 : firstLine.textContent.length);
 })();

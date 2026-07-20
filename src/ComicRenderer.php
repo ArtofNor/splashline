@@ -246,10 +246,16 @@ final class ComicRenderer
         $kv = [];
         $free = [];
         foreach ($preamble as $line) {
-            if (preg_match('/^([A-Za-z][A-Za-z ]{0,30}):\s+(.+)$/', $line, $m)
+            if (preg_match('/^([A-Za-z][A-Za-z ]{0,30}):\s*(.*)$/', $line, $m)
                 && in_array(strtolower(trim($m[1])), $known, true)
             ) {
-                $kv[strtolower(trim($m[1]))] = trim($m[2]);
+                // A known key with nothing after it is an unfilled credit —
+                // the stub a new script opens on. Drop it rather than print
+                // "Title:" as prose, which is what Fountain's title page does
+                // with the same line.
+                if (trim($m[2]) !== '') {
+                    $kv[strtolower(trim($m[1]))] = trim($m[2]);
+                }
             } else {
                 $free[] = $line;
             }

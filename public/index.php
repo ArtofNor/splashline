@@ -121,6 +121,14 @@ $content = '';
 $path = $file !== '' ? script_path($file) : null;
 if ($path !== null && is_file($path)) {
     $content = (string) file_get_contents($path);
+} elseif ($action === 'new') {
+    // A new script opens on its title block, because the credits are what a
+    // writer stops recording once the writing starts. These four keys are read
+    // by both surfaces — the Fountain title page and the comic cover — so the
+    // stub commits the file to neither: format is still decided by the first
+    // "#" page or scene heading typed underneath. A comic adds Series, Issue
+    // and Artist from here; a screenplay adds Draft date.
+    $content = "Title: \nCredit: written by\nAuthor: \nContact: \n";
 }
 
 ?><!doctype html>

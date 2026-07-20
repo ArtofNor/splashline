@@ -86,6 +86,13 @@ check(str_contains($html, 'cc-title">Night Market'), 'cover title');
 check(preg_match('/cc-footer.*x@example\.com/s', $html) === 1, 'contact in footer');
 check(str_contains($html, 'cc-note">The plan:'), 'free text with colon stays prose');
 
+// A new script opens on an unfilled title stub; empty credits print nothing
+// rather than turning up as prose on the cover.
+$html = $render("Title: \nCredit: written by\nAuthor: \nContact: \n\n# PAGE{$PANEL}");
+check(!str_contains($html, 'cc-note'), 'unfilled credit keys do not render as notes');
+check(!str_contains($html, 'cc-title'), 'and an empty Title prints no heading');
+check(str_contains($html, 'written by'), 'the filled one still renders');
+
 // --- Detection / Support ------------------------------------------------------
 check(Support::sniffComic("# INT. GYM - NIGHT\n") === true, 'H1 slug sniffs comic');
 check(Support::sniffComic("## **PANEL 1:** x\n") === true, 'panel label sniffs comic');
