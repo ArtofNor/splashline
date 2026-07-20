@@ -5,7 +5,7 @@ Contact: hello@example.com
 
 A reference script for panel types. Each page groups related callouts.
 
-The convention: caps keyword at the START of the panel description, placement notes in parentheses after it. A bare # with no location works too, the page just shows as PAGE N. Panel labels are also optional: a ## line without a PANEL label numbers itself, like panel eight on the grid page.
+The convention: caps keyword at the START of the panel description, placement notes in parentheses after it. A bare # with no location works too, the page just shows as PAGE N. Panel labels number themselves, so the short form is a bare ## and the description; panel eight on the grid page is written that way. This script spells its labels out because it is a reference and the labels are part of what it shows: the grid page mixes both forms, panel eight bare among eight spelled-out neighbours, and still counts one to nine. Spelled-out labels parse the same, and the editor shows yours rather than renumbering them.
 
 Dialogue needs no marker at all. Inside a panel, a caps cue and a colon opens a balloon, so KEO: is a beat the way ## is a panel. Because the cue must be caps, a description that happens to carry a colon stays description. Writing ### in front of a cue still works and reads the same.
 

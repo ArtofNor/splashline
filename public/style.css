@@ -137,9 +137,50 @@ main { padding: 2rem 1rem; }
 .editor-live .ln.synopsis { color: #999; font-style: italic; }
 .editor-live .ln.page-break { color: #bbb; text-align: center; }
 
-/* Editor-only: Sahtu comic scripts (.md), classified by heading level. */
-.editor-live .ln.c-page { font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 0.2em; }
-.editor-live .ln.c-panel { font-weight: bold; }
+/* Editor-only: Sahtu comic scripts (.md), classified by heading level. The #s
+   themselves aren't here — a comic line keeps its marker in data-mark and shows
+   only its body (see editor.js) — so the labels below are drawn rather than
+   typed, and the numbers come from counters that follow the same rules
+   ComicRenderer prints with: pages count from 1, panels restart on each page. */
+/* cpage only. Resetting cpanel here too would put it in the editor's own scope,
+   and a counter already in scope can't be re-scoped by a child — every page's
+   "counter-reset: cpanel" would then be the same counter and panels would run
+   1..n across the whole script instead of restarting. Leaving it out lets each
+   page create its own, which is what makes the numbering per-page. */
+.editor-live.is-comic { counter-reset: cpage; }
+
+.editor-live .ln.c-page {
+  counter-increment: cpage;
+  counter-reset: cpanel;
+  font-weight: bold;
+  text-transform: uppercase;
+  /* Underlined rather than ruled off, the same mark Preview gives .cp-no and
+     .cp-slug — so the head stops at the end of the slug instead of drawing a
+     line across the page. */
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  margin-top: 1.2em;
+}
+/* The gap is a margin, not spaces, so the underline breaks across it the way
+   Preview's separate .cp-no and .cp-slug spans do. */
+.editor-live .ln.c-page::before { content: "PAGE " counter(cpage); margin-right: 0.8em; }
+/* The writer numbered the page themselves ("PAGE TWO: ..."), so printing ours
+   next to theirs would read as two page numbers. Same call as ComicRenderer:77. */
+.editor-live .ln.c-page.c-page-own::before { content: none; }
+
+/* The label is bold, the description isn't — Preview bolds only its
+   .panel-label and leaves the description at normal weight. */
+.editor-live .ln.c-panel { counter-increment: cpanel; margin-top: 0.9em; }
+.editor-live .ln.c-panel::before { content: "PANEL " counter(cpanel) ": "; font-weight: bold; }
+/* Scripts that spell the label out ("## **PANEL 1:** ...") show theirs instead
+   of the counter — the text is absorbed into data-label the same way the #s
+   are, so the asterisks never reach the page. */
+.editor-live .ln.c-panel.c-panel-own::before { content: attr(data-label) ": "; }
+
+/* Enter ends a paragraph, and the blank line it writes is shown as the gap it
+   means rather than an empty row. It stays a real line — the caret can sit in
+   it and Backspace removes it — just a short one. */
+.editor-live.is-comic .ln.blank { line-height: 0.7em; }
 /* A beat is a two-column form, the same one Preview builds with .beat: the cue
    on the left margin with #, ## and ### all flush, the balloon text 2.2in in
    (the width of .beat-label). Here the columns come from the source's own tab,
