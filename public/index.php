@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+use Scriptwriter\ComicExporter;
 use Scriptwriter\ComicParser;
 use Scriptwriter\ComicRenderer;
 use Scriptwriter\FountainParser;
@@ -11,6 +12,7 @@ require __DIR__ . '/../src/FountainParser.php';
 require __DIR__ . '/../src/Renderer.php';
 require __DIR__ . '/../src/ComicParser.php';
 require __DIR__ . '/../src/ComicRenderer.php';
+require __DIR__ . '/../src/ComicExporter.php';
 require __DIR__ . '/../src/Support.php';
 
 const SCRIPTS_DIR = __DIR__ . '/../scripts';
@@ -127,6 +129,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save'
     exit;
 }
 
+// --- Export a numbered copy -------------------------------------------------
+// A download, never a write. The numbers are computed everywhere else, which
+// is what stops a working script going stale when a panel is inserted; baking
+// them into scripts/ would trade that away. This hands out a derived copy the
+// same way Print hands out a PDF, and leaves the original alone.
+if ($action === 'export' && $file !== '') {
+    $exportPath = script_path($file);
+    if ($exportPath === null || !is_file($exportPath)) {
+        http_response_code(404);
+        exit('Not found');
+    }
+    $raw = (string) file_get_contents($exportPath);
+    if (!is_comic_file($file, $raw)) {
+        http_response_code(400);
+        exit('Numbering is a comic-script export; this is a screenplay.');
+    }
+
+    $stem = preg_replace('/\.md$/i', '', basename($file));
+    $download = $stem . ' numbered.md';
+    header('Content-Type: text/markdown; charset=utf-8');
+    header('Content-Disposition: attachment; filename="'
+        . str_replace('"', '', $download) . '"');
+    echo (new ComicExporter())->numbered($raw);
+    exit;
+}
+
 // --- Load current file for view/edit ---------------------------------------
 $content = '';
 $path = $file !== '' ? script_path($file) : null;
@@ -160,6 +188,9 @@ if ($path !== null && is_file($path)) {
     <a href="?action=new&amp;kind=comic">＋ Comic</a>
     <?php if ($action === 'view' && $file !== ''): ?>
       <a href="?action=edit&f=<?= urlencode($file) ?>">Edit</a>
+      <?php if (is_comic_file($file, $content)): ?>
+        <a href="?action=export&f=<?= urlencode($file) ?>">Numbered .md</a>
+      <?php endif; ?>
       <a href="#" onclick="window.print();return false">Print / PDF</a>
     <?php elseif ($action === 'edit' && $file !== ''): ?>
       <a href="?action=view&f=<?= urlencode($file) ?>">Preview</a>

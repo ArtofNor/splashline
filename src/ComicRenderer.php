@@ -168,60 +168,18 @@ final class ComicRenderer
     }
 
     /**
-     * The number in a writer-supplied page label: "PAGE 5", "PAGES 12-13"
-     * (first of the range), or spelled out up to ninety-nine ("PAGE TWO",
-     * "PAGE TWENTY-ONE"). Null when the label carries no readable number.
+     * The number in a writer-supplied page or panel label. Both live in
+     * Support, since the Markdown export numbers by the same rules and the two
+     * surfaces must not drift on what counts as an already-numbered label.
      */
     private function labelNumber(string $slug): ?int
     {
-        if (!preg_match('/^PAGES?\s+([A-Za-z0-9-]+)/i', $slug, $m)) {
-            return null;
-        }
-        return $this->parseNumber($m[1]);
+        return Support::pageLabelNumber($slug);
     }
 
-    /**
-     * The number in an explicit panel label ("PANEL 5", "PANEL TWO").
-     * "PANEL 2A"-style insert labels deliberately return null — inserts are a
-     * legitimate revision convention, not a numbering mistake.
-     */
     private function panelNumber(string $label): ?int
     {
-        if (!preg_match('/^PANELS?\s+([A-Za-z0-9-]+)/i', $label, $m)) {
-            return null;
-        }
-        return $this->parseNumber($m[1]);
-    }
-
-    /** Digits, a range's first number, or number words up to ninety-nine. */
-    private function parseNumber(string $tok): ?int
-    {
-        $tok = strtoupper(rtrim($tok, ':'));
-
-        if (preg_match('/^(\d+)(?:-\d+)?$/', $tok, $d)) {
-            return (int) $d[1];
-        }
-
-        $units = ['ONE' => 1, 'TWO' => 2, 'THREE' => 3, 'FOUR' => 4, 'FIVE' => 5,
-            'SIX' => 6, 'SEVEN' => 7, 'EIGHT' => 8, 'NINE' => 9, 'TEN' => 10,
-            'ELEVEN' => 11, 'TWELVE' => 12, 'THIRTEEN' => 13, 'FOURTEEN' => 14,
-            'FIFTEEN' => 15, 'SIXTEEN' => 16, 'SEVENTEEN' => 17, 'EIGHTEEN' => 18,
-            'NINETEEN' => 19];
-        $tens = ['TWENTY' => 20, 'THIRTY' => 30, 'FORTY' => 40, 'FIFTY' => 50,
-            'SIXTY' => 60, 'SEVENTY' => 70, 'EIGHTY' => 80, 'NINETY' => 90];
-
-        if (isset($units[$tok])) {
-            return $units[$tok];
-        }
-        if (isset($tens[$tok])) {
-            return $tens[$tok];
-        }
-        $parts = explode('-', $tok, 2);
-        if (count($parts) === 2 && isset($tens[$parts[0]], $units[$parts[1]])) {
-            return $tens[$parts[0]] + $units[$parts[1]];
-        }
-
-        return null;
+        return Support::panelLabelNumber($label);
     }
 
     /**

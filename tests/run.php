@@ -14,6 +14,7 @@ require __DIR__ . '/../src/FountainParser.php';
 require __DIR__ . '/../src/Renderer.php';
 require __DIR__ . '/../src/ComicParser.php';
 require __DIR__ . '/../src/ComicRenderer.php';
+require __DIR__ . '/../src/ComicExporter.php';
 require __DIR__ . '/../src/Support.php';
 
 $GLOBALS['pass'] = 0;
