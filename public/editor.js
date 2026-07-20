@@ -186,6 +186,32 @@
 
   // --- Structural edits ------------------------------------------------------
 
+  // The three levels the Sahtu comic format uses, mirroring classifyAllComic:
+  // # page, ## panel, ### beat (dialogue, caption, SFX).
+  var COMIC_LEVELS = { Digit1: '#', Digit2: '##', Digit3: '###' };
+
+  /**
+   * Set the caret line's heading level, replacing whatever level it had, so
+   * Alt+2 on "# EXT. MARKET" gives "## EXT. MARKET". Text is rewritten here
+   * rather than only class names — that's fine for an explicit command, unlike
+   * typing, where touching text nodes would break the caret and IME.
+   */
+  function setComicLevel(marks) {
+    var c = caretLine();
+    if (!c) return false;
+
+    var text = c.div.textContent;
+    var body = text.replace(/^\s*#{1,6}[ \t]*/, '');
+    var prefix = marks + ' ';
+    if (prefix + body === text) return false; // already at this level
+
+    c.div.textContent = prefix + body;
+    // Keep the caret on the same character of the body, not the same column.
+    var intoBody = Math.max(0, c.offset - (text.length - body.length));
+    placeCaret(c.div, prefix.length + intoBody);
+    return true;
+  }
+
   function splitLineAtCaret() {
     var c = caretLine();
     if (!c) return false;
@@ -254,6 +280,22 @@
     if (e.key === 'Enter' && !e.shiftKey && !composing) {
       if (splitLineAtCaret()) {
         e.preventDefault();
+        markDirty();
+      }
+      return;
+    }
+
+    // Comic heading levels. Alt is the only modifier free on every platform:
+    // Ctrl+digit and Cmd+digit are reserved by browsers for tab switching and
+    // can't be preventDefault'd. e.code because Option+1 on macOS reports
+    // e.key as '¡'.
+    if (e.altKey && !e.ctrlKey && !e.metaKey && !composing
+        && COMIC_LEVELS[e.code] && isComicDoc(getText())) {
+      // Unconditionally, before the no-op check: a second Alt+3 on a line
+      // that is already a beat still has to swallow the key, or macOS types £.
+      e.preventDefault();
+      if (setComicLevel(COMIC_LEVELS[e.code])) {
+        restyle();
         markDirty();
       }
     }
