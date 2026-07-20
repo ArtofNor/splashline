@@ -124,8 +124,15 @@ main { padding: 2rem 1rem; }
 /* Editor-only: Sahtu comic scripts (.md), classified by heading level. */
 .editor-live .ln.c-page { font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 0.2em; }
 .editor-live .ln.c-panel { font-weight: bold; }
-.editor-live .ln.c-beat { padding-left: 0.5in; }
-.editor-live .ln.c-beat-cont { padding-left: 0.75in; color: #444; }
+/* A beat is a two-column form, the same one Preview builds with .beat: the cue
+   on the left margin with #, ## and ### all flush, the balloon text 2.2in in
+   (the width of .beat-label). Here the columns come from the source's own tab,
+   so tab-size places the text — 22 characters is 2.2in at Courier's 10 per inch
+   — and the hanging indent keeps wrapped dialogue under that column instead of
+   back at the cue. Continuations are the same speech (the parser appends them
+   to the beat), so they share the column. */
+.editor-live .ln.c-beat { padding-left: 2.2in; text-indent: -2.2in; tab-size: 22; }
+.editor-live .ln.c-beat-cont { padding-left: 2.2in; color: #444; }
 .editor-live .ln.c-note { color: #8a7b52; font-style: italic; }
 
 /* --- Rendered screenplay --------------------------------------------------- */
