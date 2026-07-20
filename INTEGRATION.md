@@ -86,7 +86,38 @@ Screenplay Preview computes pages **in PHP** (`Renderer::LINES_PER_PAGE`,
 CSS and PHP cross-reference each other in comments. Change either side and
 pages will overflow or under-fill. Theme *around* the paper, not inside it.
 The comic view has no line-count math (sheets are `min-height: 11in`) and
-tolerates more restyling, but keep Courier for the manuscript look.
+tolerates more restyling, but keep a Courier-metric face for the manuscript
+look.
+
+### Changing the font (the one paper-side knob)
+
+The face is a variable, `--script-font` in `:root`, used by `.title-page`,
+`.screenplay` and `.comic`. Set it once and all three surfaces follow:
+
+```css
+:root { --script-font: "Courier Prime", "Courier New", Courier, monospace; }
+```
+
+The requirement is not "a monospace font", it is **10 characters per inch at
+12pt** — `Renderer::WIDTHS` counts characters, and the CSS turns them into
+inches at that rate. A face with any other advance width still looks fine on
+screen while every page break lands in the wrong place. Courier Prime (John
+August's, metric-compatible by design), Courier Screenplay and Nimbus Mono
+qualify; most system `monospace` defaults do not.
+
+Re-measure after changing it. 60 characters must span exactly 6.00in:
+
+```js
+(s => { s.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;font:12pt "Your Font"';
+        s.textContent = 'M'.repeat(60); document.body.append(s);
+        console.log(s.getBoundingClientRect().width / 96, 'in — want 6'); s.remove();
+      })(document.createElement('span'))
+```
+
+Measure the result, not the intent: naming a font that isn't installed falls
+through the stack silently, and `document.fonts.check()` reports `true` even
+for a family that does not exist. Then re-run behavior 4 below (no page's
+content overflows its sheet) against a long script.
 
 ## Behaviors to preserve (test these after porting)
 

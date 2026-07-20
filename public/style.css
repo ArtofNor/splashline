@@ -4,6 +4,22 @@
   --bg: #2b2b2b;
   --accent: #7a5cff;
   --muted: #888;
+  /* The face every script surface is set in — the one part of the paper meant
+     to be swapped. It must be monospaced at 10 characters per inch, because
+     that is what Renderer::WIDTHS counts in: 60 characters of action fill the
+     6in text block exactly, and a font with any other advance width silently
+     moves every page break. Courier Prime, Courier Screenplay and Nimbus Mono
+     all qualify; most "monospace" defaults do not. Verify before trusting one,
+     in the console on a preview page:
+
+       (s => { s.style.cssText='position:absolute;visibility:hidden;white-space:pre;font:12pt "Your Font"';
+               s.textContent='M'.repeat(60); document.body.append(s);
+               console.log(s.getBoundingClientRect().width / 96, 'in — want 6'); s.remove();
+             })(document.createElement('span'))
+
+     Name a font that isn't installed and the browser falls through the stack
+     silently, so measure the result rather than the intent. */
+  --script-font: "Courier New", Courier, monospace;
   /* One "character" of 12pt Courier ~= 0.6 * 12pt. 60 chars ~= the classic
      6-inch text block of a US-Letter screenplay page. */
   --page-width: 8.5in;
@@ -158,10 +174,11 @@ main { padding: 2rem 1rem; }
   right: var(--page-pad-right);
 }
 
-/* Typography shared by every script surface. */
+/* Typography shared by every script surface. Swap the face at --script-font,
+   not here, so the editor and both viewers stay on one font. */
 .title-page,
 .screenplay {
-  font-family: "Courier New", Courier, monospace;
+  font-family: var(--script-font);
   font-size: 12pt;
   line-height: 1;
 }
@@ -224,7 +241,7 @@ main { padding: 2rem 1rem; }
 /* Comic scripts as Courier manuscript, same face as the screenplay side. One
    sheet per comic page; speeches numbered per page for lettering. */
 .comic {
-  font-family: "Courier New", Courier, monospace;
+  font-family: var(--script-font);
   font-size: 12pt;
   line-height: 1.4;
 }
