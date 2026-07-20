@@ -9,7 +9,8 @@ namespace Scriptwriter;
  *
  *   # EXT. HIGHWAY - DAY [SPREAD]     page, written as a location slug
  *   ## **PANEL 1:** description       panel, bold label then description
- *   ### JANIDA:<tab>line              beat: dialogue, SFX, or CAPTION
+ *   JANIDA:<tab>line                  beat: dialogue, SFX, or CAPTION
+ *   ### JANIDA:<tab>line              the same beat, written the long way
  *
  * parse() returns:
  *   [
@@ -106,6 +107,15 @@ final class ComicParser
                 continue;
             }
 
+            // A bare cue is a beat: dialogue is the most frequent line in a
+            // comic script, so "NOI:<tab>Sorry!" needs no ### in front of it.
+            // Only inside a panel, so the preamble's "Title:" stays preamble.
+            if ($panel !== null && $this->isCue($t)) {
+                $pendingBlank = false;
+                $panel['beats'][] = $this->parseBeat($t);
+                continue;
+            }
+
             // Plain line. Standalone [bracketed notes] stay notes; anything
             // else continues what came before it: dialogue keeps flowing after
             // a beat (a blank line makes a new paragraph, so speeches can run
@@ -141,6 +151,24 @@ final class ComicParser
         }
 
         return ['label' => $label, 'desc' => $body, 'beats' => [], 'notes' => []];
+    }
+
+    /**
+     * Does this line open a beat on its own, without a ### in front of it?
+     *
+     * The cue must be caps, which is what keeps prose out: "The convention:
+     * caps keyword at the START" has lowercase, and so does the preamble's
+     * "Title:". Panel-type keywords are unaffected because the house format
+     * ends them with a period — "SPLASH.", "BIG PANEL." — not a colon. The
+     * caps test is ASCII, mirroring isUpper() in editor.js so both surfaces
+     * agree; a cue in Lao or Thai still gets a beat by writing the ###.
+     */
+    private function isCue(string $t): bool
+    {
+        if (!preg_match('/^([^:\n]{1,40}):/u', $t, $m)) {
+            return false;
+        }
+        return (bool) preg_match('/[A-Za-z]/', $m[1]) && !preg_match('/[a-z]/', $m[1]);
     }
 
     /** @return array{tag: string, ext: ?string, type: string, text: string} */

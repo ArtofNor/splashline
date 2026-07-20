@@ -47,16 +47,27 @@
     return /\.md$/i.test(filenameEl.value.trim() || originalEl.value);
   }
 
+  // A bare cue opens a beat without the ###, mirroring isCue() in
+  // ComicParser. Caps is what keeps prose out ("The convention: ..."), and
+  // panel-type keywords end in a period rather than a colon, so SPLASH. and
+  // BIG PANEL. are unaffected.
+  function isCue(t) {
+    var m = /^([^:\n]{1,40}):/.exec(t);
+    return !!m && isUpper(m[1]);
+  }
+
   function classifyAllComic(texts) {
     var out = new Array(texts.length);
-    var last = null; // Last non-blank class, for dialogue continuations.
+    var last = null;    // Last non-blank class, for dialogue continuations.
+    var inPanel = false; // Bare cues only read as beats inside a panel.
     for (var i = 0; i < texts.length; i++) {
       var t = texts[i].trim();
       if (t === '') { out[i] = 'blank'; continue; }
       if (/^###(\s|$)/.test(t)) out[i] = 'c-beat';
-      else if (/^##(\s|$)/.test(t)) out[i] = 'c-panel';
-      else if (/^#(\s|$)/.test(t)) out[i] = 'c-page';
+      else if (/^##(\s|$)/.test(t)) { out[i] = 'c-panel'; inPanel = true; }
+      else if (/^#(\s|$)/.test(t)) { out[i] = 'c-page'; inPanel = false; }
       else if (/^\[.*\]$/.test(t)) out[i] = 'c-note';
+      else if (inPanel && isCue(t)) out[i] = 'c-beat';
       // A plain line after a beat continues that speech (multiline dialogue).
       else if (last === 'c-beat' || last === 'c-beat-cont') out[i] = 'c-beat-cont';
       else out[i] = 'c-desc';
@@ -186,6 +197,32 @@
 
   // --- Structural edits ------------------------------------------------------
 
+  // The three levels the Sahtu comic format uses, mirroring classifyAllComic:
+  // # page, ## panel, ### beat (dialogue, caption, SFX).
+  var COMIC_LEVELS = { Digit1: '#', Digit2: '##', Digit3: '###' };
+
+  /**
+   * Set the caret line's heading level, replacing whatever level it had, so
+   * Alt+2 on "# EXT. MARKET" gives "## EXT. MARKET". Text is rewritten here
+   * rather than only class names — that's fine for an explicit command, unlike
+   * typing, where touching text nodes would break the caret and IME.
+   */
+  function setComicLevel(marks) {
+    var c = caretLine();
+    if (!c) return false;
+
+    var text = c.div.textContent;
+    var body = text.replace(/^\s*#{1,6}[ \t]*/, '');
+    var prefix = marks + ' ';
+    if (prefix + body === text) return false; // already at this level
+
+    c.div.textContent = prefix + body;
+    // Keep the caret on the same character of the body, not the same column.
+    var intoBody = Math.max(0, c.offset - (text.length - body.length));
+    placeCaret(c.div, prefix.length + intoBody);
+    return true;
+  }
+
   function splitLineAtCaret() {
     var c = caretLine();
     if (!c) return false;
@@ -254,6 +291,34 @@
     if (e.key === 'Enter' && !e.shiftKey && !composing) {
       if (splitLineAtCaret()) {
         e.preventDefault();
+        markDirty();
+      }
+      return;
+    }
+
+    // Tab types a tab. The cue separator in a comic script is a literal tab,
+    // so the key has to reach the document rather than move focus. Shift+Tab
+    // is deliberately left alone: it's the way out of the editor for anyone
+    // working from the keyboard, so this never becomes a focus trap.
+    if (e.key === 'Tab' && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey
+        && !composing && isComicDoc(getText())) {
+      e.preventDefault();
+      insertMultiline('\t');
+      markDirty();
+      return;
+    }
+
+    // Comic heading levels. Alt is the only modifier free on every platform:
+    // Ctrl+digit and Cmd+digit are reserved by browsers for tab switching and
+    // can't be preventDefault'd. e.code because Option+1 on macOS reports
+    // e.key as '¡'.
+    if (e.altKey && !e.ctrlKey && !e.metaKey && !composing
+        && COMIC_LEVELS[e.code] && isComicDoc(getText())) {
+      // Unconditionally, before the no-op check: a second Alt+3 on a line
+      // that is already a beat still has to swallow the key, or macOS types £.
+      e.preventDefault();
+      if (setComicLevel(COMIC_LEVELS[e.code])) {
+        restyle();
         markDirty();
       }
     }

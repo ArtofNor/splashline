@@ -46,18 +46,18 @@ paginate correctly, and titles in any script become valid filenames.
 
 ## Comic scripts (.md)
 
-Three heading levels and you know the whole format:
+Two heading levels and a cue, and you know the whole format:
 
 ```markdown
 # EXT. NIGHT MARKET - NIGHT
 
 ## SPLASH. A crowded night market under strings of paper lanterns.
 
-### CAPTION:	Three minutes before the lanterns go out.
+CAPTION:	Three minutes before the lanterns go out.
 
 ##
 
-### NOI (OFF):	Sorry! Borrowing your floor!
+NOI (OFF):	Sorry! Borrowing your floor!
 ```
 
 - `#` is a page. Location slug optional: a bare `#` shows as PAGE N.
@@ -68,11 +68,19 @@ Three heading levels and you know the whole format:
   A caps keyword at the start of the description becomes a badge: SPLASH,
   SPREAD, WIDE, TALL, THIN, INSET, SILENT, REPEAT, MONTAGE, BORDERLESS,
   BLEED, BROKEN BORDER, FLASHBACK, and friends.
-- `###` is a beat: dialogue, `SFX:`, or `CAPTION:`. Balloons are numbered
-  per page for lettering. Balloon-style extensions live on the cue,
-  `NOI (WHISPER):`, `CAPTION (NOI):`. Speeches run multiline: keep typing
-  under a beat, blank line for a new paragraph. Long balloons get a quiet
-  word-count flag.
+- A caps cue followed by a colon is a beat: dialogue, `SFX:`, or
+  `CAPTION:`. No marker needed, since dialogue is the line you type most.
+  Balloons are numbered per page for lettering. Balloon-style extensions
+  live on the cue, `NOI (WHISPER):`, `CAPTION (NOI):`. Speeches run
+  multiline: keep typing under a beat, blank line for a new paragraph. Long
+  balloons get a quiet word-count flag.
+  - The cue must be caps, which is what keeps prose out: a description
+    reading `The convention: caps at the START` stays description. Panel
+    keywords end in a period (`SPLASH.`, `BIG PANEL.`), never a colon, so
+    they are unaffected — but a colon-style direction like `CLOSE ON: her
+    hands` does read as a balloon. Write it `CLOSE ON. Her hands.`
+  - `### NOI:` still works and parses identically. Use it for a cue that
+    isn't caps A-Z, such as one written in Lao or Thai.
 - Anything before the first `#` becomes a cover sheet, with `Title:`,
   `Writer:`, `Artist:`, `Contact:` credits recognized.
 

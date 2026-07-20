@@ -55,6 +55,31 @@ $html = $render($src);
 check(preg_match_all('/beat-no">(\d+)\./', $html, $m) === 4 && $m[1] === ['1', '2', '3', '1'], 'balloon numbering resets per page');
 check(str_contains($html, 'beat-ext">(WHISPER)'), 'extension rendered muted in cue');
 
+// --- Bare cues ----------------------------------------------------------------
+// Dialogue is the most frequent line in a comic script, so a caps cue opens a
+// beat on its own. The ### form stays valid and parses identically.
+$bare = $parse("# PAGE\n\n## **PANEL 1:** One.\n\nNOI (WHISPER):\tFirst line.\n\nSecond paragraph.\n\nSFX:\tKRAK\n");
+$long = $parse("# PAGE\n\n## **PANEL 1:** One.\n\n### NOI (WHISPER):\tFirst line.\n\nSecond paragraph.\n\n### SFX:\tKRAK\n");
+check($bare === $long, 'bare cue parses identically to the ### form');
+$b = $bare['pages'][0]['panels'][0]['beats'][0];
+check($b['tag'] === 'NOI' && $b['ext'] === 'WHISPER', 'bare cue splits extension from tag');
+check(str_contains($b['text'], "First line.\n\nSecond paragraph."), 'speech after a bare cue still runs multiline');
+
+// What the caps test is for: prose with a colon is description, not a balloon.
+$r = $parse("# PAGE\n\n## **PANEL 1:** One.\n\nThe convention: a caps keyword at the START.\n");
+check($r['pages'][0]['panels'][0]['beats'] === [], 'lowercase prose with a colon is not a cue');
+check(str_contains($r['pages'][0]['panels'][0]['desc'], 'The convention:'), 'that prose joins the description');
+
+// Panel-type keywords end in a period, so they are never read as cues.
+$r = $parse("# PAGE\n\n## SPLASH. The market.\n\nBIG PANEL. She skids to a stop.\n");
+check($r['pages'][0]['panels'][0]['beats'] === [], 'caps keyword with a period is not a cue');
+
+// Only inside a panel: the cover's "Title:" and page-level lines stay put.
+$r = $parse("TITLE:\tNight Market\n\n# PAGE\n\nNOI:\tToo early.\n\n## **PANEL 1:** One.\n");
+check($r['preamble'] === ["TITLE:\tNight Market"], 'caps cue above the first page stays preamble');
+check($r['pages'][0]['notes'] === ["NOI:\tToo early."], 'caps cue above the first panel stays a page note');
+check($r['pages'][0]['panels'][0]['beats'] === [], 'and does not leak into the panel');
+
 // --- Cover -------------------------------------------------------------------
 $html = $render("Title: Night Market\nWriter: A. Writer\nContact: x@example.com\n\nThe plan: three pages of chase.\n\n# PAGE{$PANEL}");
 check(str_contains($html, 'cc-title">Night Market'), 'cover title');
