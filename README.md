@@ -91,9 +91,16 @@ NOI (OFF):	Sorry! Borrowing your floor!
 Open `scripts/panel-types-reference.md` in the app: it is a complete
 reference for the format, written in the format.
 
-Detection is content-first. A comic script routes to the comic viewer even
-with a `.fountain` extension, and Fountain-style comics written as
-screenplays (sections for pages) still read fine as screenplays.
+New scripts start from one of two buttons, Screenplay or Comic, each opening
+on its own title block. That is a declaration, not a guess: the house comic
+form is ambiguous with Fountain sections on purpose (`#` is a page here and a
+section there), so an empty document cannot be recognized, only chosen. The
+choice decides the extension and how the editor formats the first keystroke.
+
+After that, detection is content-first and the choice only breaks ties. A
+comic script routes to the comic viewer even with a `.fountain` extension,
+and Fountain-style comics written as screenplays (sections for pages) still
+read fine as screenplays.
 
 ## Design principles
 

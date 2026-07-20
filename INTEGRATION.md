@@ -127,6 +127,10 @@ list below covers the shell behaviors the suite cannot reach.
 
 1. A comic script routes to the comic viewer regardless of extension
    (content sniffing), and vice versa.
+1a. `?action=new&kind=comic` saves as `.md` while the file is still only a
+   title block, and its editor styles `#`/`##` as page/panel from the first
+   keystroke. The declared kind only breaks ties: content still wins, so a
+   Fountain screenplay pasted into a comic-started file routes as Fountain.
 2. Saving a new script whose name collides with an existing one -> 409,
    never a silent overwrite. Case-insensitive.
 3. Renaming via the title field leaves exactly one file.

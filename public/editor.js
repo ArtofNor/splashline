@@ -20,6 +20,7 @@
   var source = document.getElementById('source');
   var filenameEl = document.getElementById('filename');
   var originalEl = document.getElementById('original');
+  var kindEl = document.getElementById('kind');
   var statusEl = document.getElementById('status');
 
   editor.setAttribute('data-placeholder', 'Start typing…  e.g.  INT. HOUSE - DAY');
@@ -37,10 +38,16 @@
     return isUpper(core);
   }
 
-  // Sahtu comic scripts classify by Markdown heading level instead. Detection
-  // is content-first (mirrors sniff_comic() in index.php): the house format is
-  // valid Markdown AND valid Fountain, so the extension is only a fallback.
+  // Sahtu comic scripts classify by Markdown heading level instead. A script
+  // started from the Comic button says so outright, which is the only thing
+  // that works on an empty page: the house form (bare "#" page, unlabelled
+  // "##" panel, marker-less cues) is deliberately ambiguous with Fountain
+  // sections, so a young document cannot be sniffed at all. Otherwise
+  // detection is content-first (mirrors sniff_comic() in index.php), with the
+  // extension as the last word.
   function isComicDoc(text) {
+    if (kindEl.value === 'comic') return true;
+    if (kindEl.value === 'screenplay') return false;
     if (/^#\s+(INT|EXT|EST|I\/E)[.\s]/im.test(text)
       || /^##\s+\*\*/m.test(text)
       || /^###\s+[^:\n]+:/m.test(text)) return true;
@@ -198,8 +205,9 @@
   // --- Structural edits ------------------------------------------------------
 
   // The three levels the Sahtu comic format uses, mirroring classifyAllComic:
-  // # page, ## panel, ### beat (dialogue, caption, SFX).
-  var COMIC_LEVELS = { Digit1: '#', Digit2: '##', Digit3: '###' };
+  // # page, ## panel, and a beat — which wears no marker at all, since the cue
+  // is what makes it one. Alt+3 therefore strips the line back to bare.
+  var COMIC_LEVELS = { Digit1: '#', Digit2: '##', Digit3: '' };
 
   /**
    * Set the caret line's heading level, replacing whatever level it had, so
@@ -213,7 +221,7 @@
 
     var text = c.div.textContent;
     var body = text.replace(/^\s*#{1,6}[ \t]*/, '');
-    var prefix = marks + ' ';
+    var prefix = marks === '' ? '' : marks + ' ';
     if (prefix + body === text) return false; // already at this level
 
     c.div.textContent = prefix + body;
@@ -312,8 +320,10 @@
     // Ctrl+digit and Cmd+digit are reserved by browsers for tab switching and
     // can't be preventDefault'd. e.code because Option+1 on macOS reports
     // e.key as '¡'.
+    // hasOwnProperty, not truthiness: the beat level is the empty string.
     if (e.altKey && !e.ctrlKey && !e.metaKey && !composing
-        && COMIC_LEVELS[e.code] && isComicDoc(getText())) {
+        && Object.prototype.hasOwnProperty.call(COMIC_LEVELS, e.code)
+        && isComicDoc(getText())) {
       // Unconditionally, before the no-op check: a second Alt+3 on a line
       // that is already a beat still has to swallow the key, or macOS types £.
       e.preventDefault();
@@ -369,6 +379,7 @@
     body.set('ajax', '1');
     body.set('filename', filename);
     body.set('original', originalEl.value);
+    body.set('kind', kindEl.value); // Breaks the extension tie before the content can.
     body.set('content', getText());
     var sent = body.get('content');
 

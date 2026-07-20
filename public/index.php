@@ -63,6 +63,13 @@ function h(string $s): string
 $action = $_GET['action'] ?? 'list';
 $file = $_GET['f'] ?? '';
 
+// Which format a script is written in. Declared at the New button, then
+// carried by the editor so the live surface and the saved extension agree
+// before there is any content to sniff. Empty for an existing file, which
+// knows what it is from its own bytes and name.
+$kind = ($_GET['kind'] ?? '') === 'comic' ? 'comic'
+    : (($_GET['kind'] ?? '') === 'screenplay' ? 'screenplay' : '');
+
 // --- Save (POST) -----------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save') {
     $ajax = isset($_POST['ajax']);
@@ -80,7 +87,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save'
     };
 
     $content = (string) ($_POST['content'] ?? '');
-    $name = safe_filename((string) ($_POST['filename'] ?? ''), sniff_comic($content) ?? false);
+    // Content first, as always; the editor's declared kind only breaks the tie
+    // for a script too young to sniff — a comic that is still just a title
+    // block would otherwise be saved as .fountain.
+    $declared = ($_POST['kind'] ?? '') === 'comic';
+    $name = safe_filename((string) ($_POST['filename'] ?? ''), sniff_comic($content) ?? $declared);
     if ($name === null) {
         $fail(400, 'Please give it a title with at least one letter or number.');
     }
@@ -123,12 +134,14 @@ if ($path !== null && is_file($path)) {
     $content = (string) file_get_contents($path);
 } elseif ($action === 'new') {
     // A new script opens on its title block, because the credits are what a
-    // writer stops recording once the writing starts. These four keys are read
-    // by both surfaces — the Fountain title page and the comic cover — so the
-    // stub commits the file to neither: format is still decided by the first
-    // "#" page or scene heading typed underneath. A comic adds Series, Issue
-    // and Artist from here; a screenplay adds Draft date.
-    $content = "Title: \nCredit: written by\nAuthor: \nContact: \n";
+    // writer stops recording once the writing starts — and on the format it
+    // was started as. Choosing at the New button beats sniffing: the house
+    // comic form (a bare "#" page, an unlabelled "##" panel, cue lines with no
+    // marker) is ambiguous with Fountain sections by design, so an empty
+    // document cannot be read, only declared.
+    $content = $kind === 'comic'
+        ? "Title: \nSeries: \nWriter: \nArtist: \nContact: \n\n# \n\n## \n"
+        : "Title: \nCredit: written by\nAuthor: \nDraft date: " . date('Y-m-d') . "\nContact: \n";
 }
 
 ?><!doctype html>
@@ -143,7 +156,8 @@ if ($path !== null && is_file($path)) {
 <header class="topbar">
   <a class="brand" href="?">Splashline</a>
   <nav>
-    <a href="?action=new">＋ New</a>
+    <a href="?action=new&amp;kind=screenplay">＋ Screenplay</a>
+    <a href="?action=new&amp;kind=comic">＋ Comic</a>
     <?php if ($action === 'view' && $file !== ''): ?>
       <a href="?action=edit&f=<?= urlencode($file) ?>">Edit</a>
       <a href="#" onclick="window.print();return false">Print / PDF</a>
@@ -159,7 +173,9 @@ if ($path !== null && is_file($path)) {
     <h2>Your scripts</h2>
     <?php $scripts = list_scripts(); ?>
     <?php if ($scripts === []): ?>
-      <p class="empty">No scripts yet. <a href="?action=new">Write your first one.</a></p>
+      <p class="empty">No scripts yet. Start a
+        <a href="?action=new&amp;kind=screenplay">screenplay</a> or a
+        <a href="?action=new&amp;kind=comic">comic script</a>.</p>
     <?php else: ?>
       <ul>
         <?php foreach ($scripts as $s): ?>
@@ -192,6 +208,7 @@ if ($path !== null && is_file($path)) {
     <!-- Initial Fountain source, handed to JS safely via a hidden textarea. -->
     <textarea id="source" hidden><?= h($content) ?></textarea>
     <input id="original" type="hidden" value="<?= h($file) ?>">
+    <input id="kind" type="hidden" value="<?= h($kind) ?>">
   </div>
   <script src="editor.js"></script>
 
