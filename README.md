@@ -81,8 +81,12 @@ NOI (OFF):	Sorry! Borrowing your floor!
     hands` does read as a balloon. Write it `CLOSE ON. Her hands.`
   - `### NOI:` still works and parses identically. Use it for a cue that
     isn't caps A-Z, such as one written in Lao or Thai.
-- Anything before the first `#` becomes a cover sheet, with `Title:`,
-  `Writer:`, `Artist:`, `Contact:` credits recognized.
+- Anything before the first `#` becomes a cover sheet. `Title:` heads it and
+  the creative roles stack under it in the order a page gets made — `Series`,
+  `Issue`, `Credit`, `Author`, `Writer`, `Artist`, `Illustrator`, `Penciller`,
+  `Inker`, `Colorist`, `Letterer`, `Designer`, `Cover artist`, `Translator`.
+  `Editor`, `Contact`, `Email`, `Date`, `Draft` and `Copyright` sit in a
+  footer. Any other line stays prose, colon and all.
 
 Open `scripts/panel-types-reference.md` in the app: it is a complete
 reference for the format, written in the format.

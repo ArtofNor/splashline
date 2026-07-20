@@ -93,6 +93,16 @@ check(!str_contains($html, 'cc-note'), 'unfilled credit keys do not render as no
 check(!str_contains($html, 'cc-title'), 'and an empty Title prints no heading');
 check(str_contains($html, 'written by'), 'the filled one still renders');
 
+// Everyone who draws the book is a credit, not a footnote: the creative roles
+// render in the main block, production contacts drop to the footer.
+$html = $render("Title: Vongfai\nIllustrator: Jane\nPenciller: Ana\nInker: Pat\nDesigner: Kit\nTranslator: Vong\nEditor: Bo\n\n# PAGE{$PANEL}");
+$main = substr($html, 0, strpos($html, 'cc-footer') ?: strlen($html));
+foreach (['Illustrator', 'Penciller', 'Inker', 'Designer', 'Translator'] as $role) {
+    check(str_contains($main, 'cc-key">' . $role . '</span>'), strtolower($role) . ' credited in the main block');
+}
+check(!str_contains($html, 'cc-note'), 'no creative role falls through to prose');
+check(str_contains(substr($html, strpos($html, 'cc-footer') ?: 0), 'Editor'), 'editor stays in the footer');
+
 // --- Detection / Support ------------------------------------------------------
 check(Support::sniffComic("# INT. GYM - NIGHT\n") === true, 'H1 slug sniffs comic');
 check(Support::sniffComic("## **PANEL 1:** x\n") === true, 'panel label sniffs comic');

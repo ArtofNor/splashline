@@ -239,10 +239,15 @@ final class ComicRenderer
         }
 
         // Only known credit keys count as "Key: value" — free text is allowed
-        // to contain colons without being mistaken for a credit line.
-        $known = ['title', 'series', 'issue', 'credit', 'author', 'writer', 'artist',
-            'colorist', 'letterer', 'editor', 'contact', 'email', 'date', 'draft',
-            'draft date', 'copyright'];
+        // to contain colons without being mistaken for a credit line. The
+        // creative roles are listed in the order a page gets made, and a comic
+        // is made by more hands than a screenplay: everyone who draws it is a
+        // credit, not a footnote. Anything not named here stays prose.
+        $creative = ['series', 'issue', 'credit', 'author', 'writer', 'artist',
+            'illustrator', 'penciller', 'penciler', 'inker', 'colorist', 'letterer',
+            'designer', 'cover', 'cover artist', 'translator'];
+        $known = array_merge(['title'], $creative,
+            ['editor', 'contact', 'email', 'date', 'draft', 'draft date', 'copyright']);
         $kv = [];
         $free = [];
         foreach ($preamble as $line) {
@@ -267,7 +272,7 @@ final class ComicRenderer
             $out .= '<h1 class="cc-title">' . $this->inline($kv['title']) . "</h1>\n";
             unset($kv['title']);
         }
-        foreach (['series', 'issue', 'credit', 'author', 'writer', 'artist', 'colorist', 'letterer'] as $key) {
+        foreach ($creative as $key) {
             if (isset($kv[$key])) {
                 $out .= '<p class="cc-line">' . ($key === 'credit' || $key === 'author' ? ''
                     : '<span class="cc-key">' . ucfirst($key) . '</span> ')
