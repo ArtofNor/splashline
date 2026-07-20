@@ -89,6 +89,28 @@ final class FountainParser
      * @param list<string> $lines
      * @return list<array<string, mixed>>
      */
+    /**
+     * A scene heading, with Fountain's optional scene number lifted off it.
+     *
+     * The number is written at the end of the line between hashes —
+     * "INT. HOUSE - DAY #1#", and revision forms like "#1A#" or "#A-1#" —
+     * which is what other Fountain tools read and write. Keeping it out of the
+     * heading text means it can be placed in the margin where a scene number
+     * belongs, rather than printed as part of the slug.
+     *
+     * @return array{type: string, text: string, number: ?string}
+     */
+    private function sceneHeading(string $text): array
+    {
+        $number = null;
+        if (preg_match('/^(.*?)\s*#([^#\s][^#]*)#$/', $text, $m)) {
+            $text = rtrim($m[1]);
+            $number = $m[2];
+        }
+
+        return ['type' => 'scene_heading', 'text' => $text, 'number' => $number];
+    }
+
     private function parseBody(array $lines): array
     {
         $tokens = [];
@@ -145,11 +167,11 @@ final class FountainParser
 
             // Scene heading: forced with '.' (but not '..') or a known prefix.
             if (preg_match('/^\.[^.]/', $trimmed)) {
-                $tokens[] = ['type' => 'scene_heading', 'text' => ltrim(substr($trimmed, 1))];
+                $tokens[] = $this->sceneHeading(ltrim(substr($trimmed, 1)));
                 continue;
             }
             if ($prevBlank && preg_match('/^' . self::SCENE_PREFIXES . '[\. ]/i', $trimmed)) {
-                $tokens[] = ['type' => 'scene_heading', 'text' => $trimmed];
+                $tokens[] = $this->sceneHeading($trimmed);
                 continue;
             }
 

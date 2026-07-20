@@ -118,8 +118,17 @@ final class Renderer
             return "<div class=\"ln blank\"></div>\n";
         }
         $cls = str_replace('_', '-', $t['type']);
+        $html = $this->inline((string) $t['text']);
 
-        return '<div class="ln ' . $cls . '">' . $this->inline((string) $t['text']) . "</div>\n";
+        // A scene number sits in both margins, the way a numbered shooting
+        // script prints it — never inside the slug.
+        if (($t['number'] ?? null) !== null) {
+            $n = $this->inline((string) $t['number']);
+            $html = '<span class="scene-no">' . $n . '</span>' . $html
+                . '<span class="scene-no right">' . $n . '</span>';
+        }
+
+        return '<div class="ln ' . $cls . '">' . $html . "</div>\n";
     }
 
     /**

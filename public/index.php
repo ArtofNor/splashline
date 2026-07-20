@@ -4,6 +4,7 @@ declare(strict_types=1);
 use Scriptwriter\ComicExporter;
 use Scriptwriter\ComicParser;
 use Scriptwriter\ComicRenderer;
+use Scriptwriter\FountainExporter;
 use Scriptwriter\FountainParser;
 use Scriptwriter\Renderer;
 use Scriptwriter\Support;
@@ -13,6 +14,7 @@ require __DIR__ . '/../src/Renderer.php';
 require __DIR__ . '/../src/ComicParser.php';
 require __DIR__ . '/../src/ComicRenderer.php';
 require __DIR__ . '/../src/ComicExporter.php';
+require __DIR__ . '/../src/FountainExporter.php';
 require __DIR__ . '/../src/Support.php';
 
 const SCRIPTS_DIR = __DIR__ . '/../scripts';
@@ -141,17 +143,21 @@ if ($action === 'export' && $file !== '') {
         exit('Not found');
     }
     $raw = (string) file_get_contents($exportPath);
-    if (!is_comic_file($file, $raw)) {
-        http_response_code(400);
-        exit('Numbering is a comic-script export; this is a screenplay.');
-    }
+    $comic = is_comic_file($file, $raw);
 
-    $stem = preg_replace('/\.md$/i', '', basename($file));
-    $download = $stem . ' numbered.md';
-    header('Content-Type: text/markdown; charset=utf-8');
+    // Each format numbers what it counts, in its own syntax: comic pages and
+    // panels as Markdown labels, screenplay scenes as Fountain's #n#. Both
+    // stay readable by anything else that reads the format.
+    $stem = preg_replace('/\.(md|fountain)$/i', '', basename($file));
+    $download = $stem . ' numbered.' . ($comic ? 'md' : 'fountain');
+    $body = $comic
+        ? (new ComicExporter())->numbered($raw)
+        : (new FountainExporter())->numbered($raw);
+
+    header('Content-Type: text/plain; charset=utf-8');
     header('Content-Disposition: attachment; filename="'
         . str_replace('"', '', $download) . '"');
-    echo (new ComicExporter())->numbered($raw);
+    echo $body;
     exit;
 }
 
@@ -188,10 +194,25 @@ if ($path !== null && is_file($path)) {
     <a href="?action=new&amp;kind=comic">＋ Comic</a>
     <?php if ($action === 'view' && $file !== ''): ?>
       <a href="?action=edit&f=<?= urlencode($file) ?>">Edit</a>
-      <?php if (is_comic_file($file, $content)): ?>
-        <a href="?action=export&f=<?= urlencode($file) ?>">Numbered .md</a>
-      <?php endif; ?>
-      <a href="#" onclick="window.print();return false">Print / PDF</a>
+      <?php
+      // One Export control. <details> rather than a scripted menu: it opens on
+      // click, closes on Escape and is reachable from the keyboard with nothing
+      // loaded, which is the whole behaviour a menu needs here.
+      $numbered = is_comic_file($file, $content)
+          ? ['Numbered .md', 'pages and panels labelled']
+          : ['Numbered .fountain', 'scenes numbered #1#'];
+      ?>
+      <details class="menu">
+        <summary>Export</summary>
+        <div class="menu-items">
+          <a href="?action=export&f=<?= urlencode($file) ?>">
+            <?= h($numbered[0]) ?><span><?= h($numbered[1]) ?></span>
+          </a>
+          <a href="#" onclick="window.print();return false">
+            Print / PDF<span>what you see here</span>
+          </a>
+        </div>
+      </details>
     <?php elseif ($action === 'edit' && $file !== ''): ?>
       <a href="?action=view&f=<?= urlencode($file) ?>">Preview</a>
     <?php endif; ?>
