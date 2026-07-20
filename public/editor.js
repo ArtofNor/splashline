@@ -176,19 +176,51 @@
 
   // Return {div, offset} for the current caret, where offset is a character
   // index within the containing line div.
-  function caretLine() {
-    var sel = window.getSelection();
-    if (!sel.rangeCount) return null;
-    var range = sel.getRangeAt(0);
-    var div = range.startContainer;
+  function posOf(node, offset) {
+    var div = node;
     if (div.nodeType !== 1) div = div.parentNode;
     while (div && div.parentNode !== editor) div = div.parentNode;
     if (!div || div.parentNode !== editor) return null;
 
     var probe = document.createRange();
     probe.selectNodeContents(div);
-    probe.setEnd(range.startContainer, range.startOffset);
+    probe.setEnd(node, offset);
     return { div: div, offset: probe.toString().length };
+  }
+
+  function caretLine() {
+    var sel = window.getSelection();
+    if (!sel.rangeCount) return null;
+    var range = sel.getRangeAt(0);
+    return posOf(range.startContainer, range.startOffset);
+  }
+
+  // Enter, Tab and paste rewrite line text by hand, so they have to do what
+  // the browser would have done first: replace the selection. Reading only the
+  // range's start treats selected text as a collapsed caret, which left the
+  // selection sitting there while the edit landed beside it — pasting over a
+  // selected word kept the word.
+  function deleteSelection() {
+    var sel = window.getSelection();
+    if (!sel.rangeCount || sel.isCollapsed) return;
+    var range = sel.getRangeAt(0);
+    var from = posOf(range.startContainer, range.startOffset);
+    var to = posOf(range.endContainer, range.endOffset);
+    if (!from || !to) return;
+
+    var head = from.div.textContent.slice(0, from.offset);
+    var tail = to.div.textContent.slice(to.offset);
+    if (from.div !== to.div) { // A selection across lines closes the gap.
+      for (var n = from.div.nextSibling; n && n !== to.div; ) {
+        var next = n.nextSibling;
+        editor.removeChild(n);
+        n = next;
+      }
+      editor.removeChild(to.div);
+    }
+    setDivText(from.div, head + tail);
+    restyle();
+    placeCaret(from.div, head.length);
   }
 
   function placeCaret(div, offset) {
@@ -232,6 +264,7 @@
   }
 
   function splitLineAtCaret() {
+    deleteSelection();
     var c = caretLine();
     if (!c) return false;
     var text = c.div.textContent;
@@ -249,6 +282,7 @@
   }
 
   function insertMultiline(text) {
+    deleteSelection();
     var c = caretLine();
     if (!c) return;
     var lineText = c.div.textContent;
