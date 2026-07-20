@@ -47,16 +47,27 @@
     return /\.md$/i.test(filenameEl.value.trim() || originalEl.value);
   }
 
+  // A bare cue opens a beat without the ###, mirroring isCue() in
+  // ComicParser. Caps is what keeps prose out ("The convention: ..."), and
+  // panel-type keywords end in a period rather than a colon, so SPLASH. and
+  // BIG PANEL. are unaffected.
+  function isCue(t) {
+    var m = /^([^:\n]{1,40}):/.exec(t);
+    return !!m && isUpper(m[1]);
+  }
+
   function classifyAllComic(texts) {
     var out = new Array(texts.length);
-    var last = null; // Last non-blank class, for dialogue continuations.
+    var last = null;    // Last non-blank class, for dialogue continuations.
+    var inPanel = false; // Bare cues only read as beats inside a panel.
     for (var i = 0; i < texts.length; i++) {
       var t = texts[i].trim();
       if (t === '') { out[i] = 'blank'; continue; }
       if (/^###(\s|$)/.test(t)) out[i] = 'c-beat';
-      else if (/^##(\s|$)/.test(t)) out[i] = 'c-panel';
-      else if (/^#(\s|$)/.test(t)) out[i] = 'c-page';
+      else if (/^##(\s|$)/.test(t)) { out[i] = 'c-panel'; inPanel = true; }
+      else if (/^#(\s|$)/.test(t)) { out[i] = 'c-page'; inPanel = false; }
       else if (/^\[.*\]$/.test(t)) out[i] = 'c-note';
+      else if (inPanel && isCue(t)) out[i] = 'c-beat';
       // A plain line after a beat continues that speech (multiline dialogue).
       else if (last === 'c-beat' || last === 'c-beat-cont') out[i] = 'c-beat-cont';
       else out[i] = 'c-desc';

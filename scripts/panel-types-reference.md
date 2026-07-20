@@ -7,11 +7,13 @@ A reference script for panel types. Each page groups related callouts.
 
 The convention: caps keyword at the START of the panel description, placement notes in parentheses after it. A bare # with no location works too, the page just shows as PAGE N. Panel labels are also optional: a ## line without a PANEL label numbers itself, like panel eight on the grid page.
 
+Dialogue needs no marker at all. Inside a panel, a caps cue and a colon opens a balloon, so KEO: is a beat the way ## is a panel. Because the cue must be caps, a description that happens to carry a colon stays description. Writing ### in front of a cue still works and reads the same.
+
 # EXT. LIGHTHOUSE ROCK - DUSK
 
 ## **PANEL 1:** SPLASH. The lighthouse on its rock, sea churning below, storm wall building on the horizon. KEO, 60s, small figure on the gallery rail, looking out.
 
-### CAPTION:	The last keeper on the coast.
+CAPTION:	The last keeper on the coast.
 
 # INT. LIGHTHOUSE - LAMP ROOM - NIGHT
 
@@ -19,17 +21,17 @@ The convention: caps keyword at the START of the panel description, placement no
 
 ## **PANEL 2:** TALL PANEL. The spiral stairwell from above, Keo climbing, three floors of rail corkscrewing down beneath him.
 
-### SFX:	whoom
+SFX:	whoom
 
 ## **PANEL 3:** THIN PANEL. A sliver of the fuse box. One switch in the down position.
 
-### KEO:	There you are.
+KEO:	There you are.
 
 # INT. LIGHTHOUSE - LAMP ROOM - CONTINUOUS
 
 ## **PANEL 1:** BIG PANEL. Keo throws the switch with both hands, braced, teeth set.
 
-### SFX:	KRA-KOOM
+SFX:	KRA-KOOM
 
 ## **PANEL 2:** INSET (bottom right). DETAIL. His knuckles white on the switch handle.
 
@@ -45,17 +47,17 @@ The convention: caps keyword at the START of the panel description, placement no
 
 ## **PANEL 3:** The faintest glow wakes in the heart of the lens.
 
-### KEO:	(small)	Ha.
+KEO:	(small)	Ha.
 
 ## **PANEL 4:** FLASHBACK. A younger Keo and his FATHER light the old oil lamp together, hands cupped around one match.
 
-### CAPTION:	His father lit it through two wars.
+CAPTION:	His father lit it through two wars.
 
 ## **PANEL 5:** BORDERLESS. The memory dissolves, the match flame floating alone on the white of the page.
 
 ## **PANEL 6:** MONTAGE. Fragments: the fuse box, the storm swallowing the horizon, a ship's distant running lights.
 
-### CAPTION:	Somebody out there was counting on the light.
+CAPTION:	Somebody out there was counting on the light.
 
 ## **PANEL 7:** Keo pulls the backup crank from its bracket on the wall.
 
@@ -67,10 +69,10 @@ The convention: caps keyword at the START of the panel description, placement no
 
 ## **PANEL 1:** SPLASH SPREAD. FULL BLEED. The beam cuts the storm in half, the whole spread one image, rain lit silver the length of it, the ship small and safe at the far edge.
 
-### SFX:	VMMMMM
+SFX:	VMMMMM
 
 ## **PANEL 2:** INSET (far right). BROKEN BORDER. Keo leans out of the inset frame, one arm over its border, waving at the sea.
 
-### KEO:	Still here! Both of us!
+KEO:	Still here! Both of us!
 
-### CAPTION:	Panel types are a request to the artist, not an order. Say what the moment needs, then let them draw.
+CAPTION:	Panel types are a request to the artist, not an order. Say what the moment needs, then let them draw.
