@@ -8,8 +8,14 @@
  * agree on what every line is.
  *
  * Design notes:
- *  - Typing only rewrites class names, never text nodes, so the caret is never
- *    disturbed and IME/Lao composition is safe.
+ *  - A line's source is the writer's own text. Where the view differs from it
+ *    — a comic's heading marks, a panel label, the asterisks around bold — the
+ *    source is kept on the line and sourceOf() is what saving, parsing and
+ *    editing all read. getText() reassembles the file from those.
+ *  - The line the caret is in is never rendered: it holds exactly its source
+ *    (see `live`). Typing therefore always lands in plain text, which is what
+ *    keeps the caret and IME/Lao composition safe even though other lines are
+ *    rebuilt as spans.
  *  - Enter and paste are handled manually to keep the strict one-div-per-line
  *    structure that classification relies on.
  */
@@ -145,10 +151,80 @@
     return out;
   }
 
+  // Writing plain text into a line also makes it the line's source again: the
+  // view and the source are only ever allowed to differ through paint().
   function setDivText(div, text) {
+    div.removeAttribute('data-src');
     div.textContent = '';
     if (text === '') div.appendChild(document.createElement('br'));
     else div.appendChild(document.createTextNode(text));
+  }
+
+  /**
+   * What a line really says. A rendered line shows fewer characters than it
+   * holds — **bold** loses its asterisks — so the source is kept on the side
+   * and everything that saves, parses or edits reads it from here rather than
+   * from what happens to be on screen.
+   */
+  function sourceOf(div) {
+    var src = div.getAttribute('data-src');
+    return src === null ? div.textContent : src;
+  }
+
+  var BOLD = /\*\*([^*]+)\*\*/g;
+
+  /** Append text to a node, as <strong> where it is wrapped in asterisks. */
+  function rich(parent, text, hide) {
+    var last = 0;
+    var m;
+    BOLD.lastIndex = 0;
+    while ((m = BOLD.exec(text)) !== null) {
+      if (m.index > last) {
+        parent.appendChild(document.createTextNode(text.slice(last, m.index)));
+      }
+      var b = document.createElement('strong');
+      b.textContent = hide ? m[1] : m[0];
+      parent.appendChild(b);
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) {
+      parent.appendChild(document.createTextNode(text.slice(last)));
+    }
+  }
+
+  /**
+   * A rendered offset back onto the source, adding in the asterisks the view
+   * hid. Needed the moment the caret arrives on a rendered line: the markers
+   * come back, every character after them shifts, and the caret has to shift
+   * with them or it lands somewhere the writer didn't click.
+   */
+  function toSource(src, offset) {
+    var seen = 0;
+    var last = 0;
+    var m;
+    BOLD.lastIndex = 0;
+    while ((m = BOLD.exec(src)) !== null) {
+      var plain = m.index - last;
+      if (seen + plain >= offset) return last + (offset - seen);
+      seen += plain;
+      if (seen + m[1].length >= offset) return m.index + 2 + (offset - seen);
+      seen += m[1].length;
+      last = m.index + m[0].length;
+    }
+    return last + (offset - seen);
+  }
+
+  /**
+   * Put a line back to plain source before a structural edit, translating an
+   * offset into it. Edits work on what the writer wrote, never on the view.
+   */
+  function raw(div, offset) {
+    if (div.getAttribute('data-src') === null) return offset;
+    var src = sourceOf(div);
+    var at = toSource(src, offset);
+    setDivText(div, src);
+    div.psig = null;
+    return at;
   }
 
   // --- Markers ---------------------------------------------------------------
@@ -207,7 +283,7 @@
   function getText() {
     return lineDivs().map(function (d) {
       var mark = markOf(d);
-      var body = (d.getAttribute('data-raw') || '') + d.textContent;
+      var body = (d.getAttribute('data-raw') || '') + sourceOf(d);
       if (!mark) return body;
       return body === '' ? mark : mark + ' ' + body;
     }).join('\n');
@@ -259,26 +335,48 @@
    * Nothing here hides or invents a character: the line still reads back as
    * exactly its own source, which is what keeps getText and the caret honest.
    */
-  function paint(div, cls) {
-    var text = div.textContent;
-    if (cls.indexOf('c-beat') !== 0 || text === '') {
-      // Flatten spans a previous class left behind, so a line that stops being
-      // a beat stops being two columns.
-      if (div.firstElementChild && div.firstElementChild.tagName !== 'BR') {
-        setDivText(div, text);
-      }
-      return;
-    }
-
-    // The cue keeps the tab, so the column still comes from tab-size.
-    var tab = text.indexOf('\t');
-    var cue = cls === 'c-beat' || cls.indexOf('c-beat ') === 0 ? tab + 1 : 0;
+  function paint(div, cls, active) {
+    var src = sourceOf(div);
+    var hide = !active;
 
     div.textContent = '';
-    if (cue > 0) {
-      div.appendChild(span('cue', text.slice(0, cue)));
+    if (src === '') {
+      div.appendChild(document.createElement('br'));
+    } else if (cls.indexOf('c-beat') === 0) {
+      // The cue keeps the tab, so the column still comes from tab-size.
+      var tab = src.indexOf('\t');
+      var cue = cls === 'c-beat' || cls.indexOf('c-beat ') === 0 ? tab + 1 : 0;
+      if (cue > 0) div.appendChild(span('cue', src.slice(0, cue)));
+      var say = document.createElement('span');
+      say.className = 'say';
+      rich(say, src.slice(cue), hide);
+      div.appendChild(say);
+    } else {
+      rich(div, src, hide);
     }
-    div.appendChild(span('say', text.slice(cue)));
+
+    // Only remember a source when the view has stopped matching it.
+    if (div.textContent === src) div.removeAttribute('data-src');
+    else div.setAttribute('data-src', src);
+  }
+
+  /**
+   * The line the caret is in, which is the one line kept as plain source.
+   *
+   * Markdown editors settled on this years ago: render the markup everywhere
+   * except where you are working, so **bold** reads as bold on the page but
+   * shows its asterisks the moment you put the caret in it. It is also what
+   * makes hiding characters safe here — typing only ever happens on the live
+   * line, so the browser is never inserting text into a span that is standing
+   * in for something else.
+   *
+   * It is deliberately not cleared by a non-collapsed selection: re-rendering
+   * a line mid-drag would move the very text being selected.
+   */
+  var live = null;
+
+  function signature(name, isLive, src) {
+    return name + ' ' + (isLive ? '1' : '0') + ' ' + src;
   }
 
   function span(cls, text) {
@@ -292,7 +390,7 @@
     ensureStructure();
     var comic = syncComicMode();
     var divs = lineDivs();
-    var texts = divs.map(function (d) { return d.textContent; });
+    var texts = divs.map(sourceOf);
     var cls = comic
       ? classifyAllComic(texts, divs.map(markOf),
           divs.map(function (d) { return d.getAttribute('data-label'); }))
@@ -304,7 +402,7 @@
     for (var i = 0; i < divs.length; i++) {
       var name = 'ln ' + cls[i];
       if (divs[i].className !== name) divs[i].className = name;
-      var sig = name + ' ' + texts[i];
+      var sig = signature(name, divs[i] === live, texts[i]);
       if (divs[i].psig !== sig) stale.push(i);
     }
 
@@ -312,8 +410,8 @@
       var c = caretLine();
       for (var j = 0; j < stale.length; j++) {
         var k = stale[j];
-        paint(divs[k], cls[k]);
-        divs[k].psig = 'ln ' + cls[k] + ' ' + divs[k].textContent;
+        paint(divs[k], cls[k], divs[k] === live);
+        divs[k].psig = signature('ln ' + cls[k], divs[k] === live, texts[k]);
       }
       if (c) placeCaret(c.div, c.offset);
     }
@@ -369,6 +467,10 @@
     var to = posOf(range.endContainer, range.endOffset);
     if (!from || !to) return;
 
+    // Both ends go back to plain source first: slicing the view would drop
+    // whatever the view was hiding.
+    from.offset = raw(from.div, from.offset);
+    to.offset = to.div === from.div ? toSource(sourceOf(to.div), to.offset) : raw(to.div, to.offset);
     var head = from.div.textContent.slice(0, from.offset);
     var tail = to.div.textContent.slice(to.offset);
     if (from.div !== to.div) { // A selection across lines closes the gap.
@@ -462,6 +564,7 @@
     deleteSelection();
     var c = caretLine();
     if (!c) return false;
+    c.offset = raw(c.div, c.offset);
     var text = c.div.textContent;
     var before = text.slice(0, c.offset);
     var after = text.slice(c.offset);
@@ -491,6 +594,7 @@
     deleteSelection();
     var c = caretLine();
     if (!c) return;
+    c.offset = raw(c.div, c.offset);
     var lineText = c.div.textContent;
     var before = lineText.slice(0, c.offset);
     var after = lineText.slice(c.offset);
@@ -688,6 +792,54 @@
         markDirty();
       }
     }
+  });
+
+  // Moving the caret onto a line brings its markers back, and takes them off
+  // the line just left. The caret is remapped as it goes, since the markers
+  // reappearing shifts every character after them.
+  document.addEventListener('selectionchange', function () {
+    if (composing || document.activeElement !== editor) return;
+    var sel = window.getSelection();
+    if (!sel.rangeCount || !sel.isCollapsed) return;
+    var r = sel.getRangeAt(0);
+    var c = posOf(r.startContainer, r.startOffset);
+    if (!c || c.div === live) return;
+
+    var was = live;
+    live = c.div;
+    var at = toSource(sourceOf(c.div), c.offset);
+    if (was && was.parentNode === editor) repaint(was);
+    repaint(c.div);
+    placeCaret(c.div, at);
+  });
+
+  function repaint(div) {
+    var cls = div.className.replace(/^ln ?/, '');
+    paint(div, cls, div === live);
+    div.psig = signature(div.className, div === live, sourceOf(div));
+  }
+
+  // Copying from a rendered line must yield what the writer wrote, not what
+  // the view shows, or the asterisks would quietly vanish on the way out.
+  editor.addEventListener('copy', function (e) {
+    var sel = window.getSelection();
+    if (!sel.rangeCount || sel.isCollapsed) return;
+    var r = sel.getRangeAt(0);
+    var from = posOf(r.startContainer, r.startOffset);
+    var to = posOf(r.endContainer, r.endOffset);
+    if (!from || !to) return;
+
+    var parts = [];
+    for (var d = from.div; d; d = d.nextSibling) {
+      if (d.nodeType !== 1) continue;
+      var src = sourceOf(d);
+      var a = d === from.div ? toSource(src, from.offset) : 0;
+      var b = d === to.div ? toSource(src, to.offset) : src.length;
+      parts.push(src.slice(a, b));
+      if (d === to.div) break;
+    }
+    e.clipboardData.setData('text/plain', parts.join('\n'));
+    e.preventDefault();
   });
 
   editor.addEventListener('paste', function (e) {
