@@ -232,6 +232,17 @@ main { padding: 2rem 1rem; }
    to the beat), so they share the column. */
 .editor-live .ln.c-beat { padding-left: 2.2in; text-indent: -2.2in; tab-size: 22; }
 .editor-live .ln.c-beat-cont { padding-left: 2.2in; color: #444; }
+
+/* The lettering conventions Preview prints, on the speech only — a beat is
+   painted as a .cue and a .say so the cue stays in its column while the words
+   beside it get set the way they'll be drawn. Sound effects are heavy, tracked
+   and italic (.beat.sfx); captions sit in a tinted box (.beat.caption). */
+.editor-live .ln.c-sfx .say { font-weight: bold; font-style: italic; letter-spacing: 0.1em; }
+.editor-live .ln.c-caption .say {
+  background: #f2f0e9;
+  box-shadow: 0 0 0 1px #ddd8c8;
+  border-radius: 2px;
+}
 .editor-live .ln.c-note { color: #8a7b52; font-style: italic; }
 
 /* --- Rendered screenplay --------------------------------------------------- */

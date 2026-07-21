@@ -65,9 +65,25 @@
 
   // Levels come from each line's absorbed marker rather than its text, since
   // in a comic doc the #s live in data-mark and never on screen (see absorb()).
+  /**
+   * Which of the three kinds of beat a cue opens — mirrors parseBeat() in
+   * ComicParser, including the balloon extension on the tag, so "CAPTION
+   * (NOI):" is a caption and not a character called CAPTION (NOI). Dialogue is
+   * the default and carries no extra class; it's the one that looks plain.
+   */
+  function beatType(t) {
+    var m = /^([^:]+):/.exec(t);
+    if (!m) return '';
+    var tag = m[1].replace(/\s*\([^)]*\)\s*$/, '').trim().toUpperCase();
+    if (tag === 'SFX') return ' c-sfx';
+    if (tag.indexOf('CAPTION') === 0) return ' c-caption';
+    return '';
+  }
+
   function classifyAllComic(texts, marks, labels) {
     var out = new Array(texts.length);
     var last = null;    // Last non-blank class, for dialogue continuations.
+    var kind = '';      // Its beat type, so a continuation keeps the styling.
     var inPanel = false; // Bare cues only read as beats inside a panel.
     for (var i = 0; i < texts.length; i++) {
       var t = texts[i].trim();
@@ -76,7 +92,7 @@
       // alone so the speech below still reads as the same speech. That mirrors
       // $pendingBlank in ComicParser, which appends across it with "\n\n".
       if (t === '' && mk === '') { out[i] = 'blank'; continue; }
-      if (mk === '###') out[i] = 'c-beat';
+      if (mk === '###') { kind = beatType(t); out[i] = 'c-beat' + kind; }
       // A label the writer spelled out is drawn from data-label instead of the
       // counter, mirroring parsePanel(), which still reads those files.
       else if (mk === '##') { out[i] = labels[i] ? 'c-panel c-panel-own' : 'c-panel'; inPanel = true; }
@@ -84,11 +100,12 @@
       // counter, the same call ComicRenderer makes before printing "PAGE n".
       else if (mk === '#') { out[i] = /^PAGE\b/i.test(t) ? 'c-page c-page-own' : 'c-page'; inPanel = false; }
       else if (/^\[.*\]$/.test(t)) out[i] = 'c-note';
-      else if (inPanel && isCue(t)) out[i] = 'c-beat';
-      // A plain line after a beat continues that speech (multiline dialogue).
-      else if (last === 'c-beat' || last === 'c-beat-cont') out[i] = 'c-beat-cont';
+      else if (inPanel && isCue(t)) { kind = beatType(t); out[i] = 'c-beat' + kind; }
+      // A plain line after a beat continues that speech (multiline dialogue),
+      // and a continued caption is still a caption.
+      else if (last === 'c-beat' || last === 'c-beat-cont') out[i] = 'c-beat-cont' + kind;
       else out[i] = 'c-desc';
-      last = out[i];
+      last = out[i].split(' ')[0];
     }
     return out;
   }
@@ -233,6 +250,44 @@
     return true;
   }
 
+  /**
+   * Give a line the spans its class needs. A beat is two columns — the cue and
+   * the speech — and only the speech carries the lettering conventions, so a
+   * sound effect can be heavy and tracked without dragging its cue out of the
+   * column. Preview splits the same way, into .beat-label and .beat-text.
+   *
+   * Nothing here hides or invents a character: the line still reads back as
+   * exactly its own source, which is what keeps getText and the caret honest.
+   */
+  function paint(div, cls) {
+    var text = div.textContent;
+    if (cls.indexOf('c-beat') !== 0 || text === '') {
+      // Flatten spans a previous class left behind, so a line that stops being
+      // a beat stops being two columns.
+      if (div.firstElementChild && div.firstElementChild.tagName !== 'BR') {
+        setDivText(div, text);
+      }
+      return;
+    }
+
+    // The cue keeps the tab, so the column still comes from tab-size.
+    var tab = text.indexOf('\t');
+    var cue = cls === 'c-beat' || cls.indexOf('c-beat ') === 0 ? tab + 1 : 0;
+
+    div.textContent = '';
+    if (cue > 0) {
+      div.appendChild(span('cue', text.slice(0, cue)));
+    }
+    div.appendChild(span('say', text.slice(cue)));
+  }
+
+  function span(cls, text) {
+    var s = document.createElement('span');
+    s.className = cls;
+    s.textContent = text;
+    return s;
+  }
+
   function restyle() {
     ensureStructure();
     var comic = syncComicMode();
@@ -242,7 +297,27 @@
       ? classifyAllComic(texts, divs.map(markOf),
           divs.map(function (d) { return d.getAttribute('data-label'); }))
       : classifyAll(texts);
-    for (var i = 0; i < divs.length; i++) divs[i].className = 'ln ' + cls[i];
+    // Repainting replaces a line's child nodes, so the caret is saved and put
+    // back — but only when something actually needs repainting, which keeps
+    // ordinary typing from disturbing a selection it has no business touching.
+    var stale = [];
+    for (var i = 0; i < divs.length; i++) {
+      var name = 'ln ' + cls[i];
+      if (divs[i].className !== name) divs[i].className = name;
+      var sig = name + ' ' + texts[i];
+      if (divs[i].psig !== sig) stale.push(i);
+    }
+
+    if (stale.length > 0) {
+      var c = caretLine();
+      for (var j = 0; j < stale.length; j++) {
+        var k = stale[j];
+        paint(divs[k], cls[k]);
+        divs[k].psig = 'ln ' + cls[k] + ' ' + divs[k].textContent;
+      }
+      if (c) placeCaret(c.div, c.offset);
+    }
+
     editor.classList.toggle('is-empty', getText().trim() === '');
   }
 
@@ -309,21 +384,40 @@
     placeCaret(from.div, head.length);
   }
 
+  /**
+   * The text node holding a character offset into a line, and the offset
+   * within it. A painted line is several spans rather than one text node (see
+   * paint()), so this walks them instead of assuming div.firstChild.
+   */
+  function seek(div, offset) {
+    var walk = document.createTreeWalker(div, NodeFilter.SHOW_TEXT);
+    var node;
+    var seen = 0;
+    while ((node = walk.nextNode()) !== null) {
+      if (seen + node.length >= offset) {
+        return { node: node, offset: offset - seen };
+      }
+      seen += node.length;
+    }
+    return null;
+  }
+
   function selectRange(div, start, end) {
-    var node = (div.firstChild && div.firstChild.nodeType === 3) ? div.firstChild : null;
-    if (!node) { placeCaret(div, 0); return; }
+    var a = seek(div, start);
+    var b = seek(div, end);
+    if (!a || !b) { placeCaret(div, start); return; }
     var r = document.createRange();
-    r.setStart(node, Math.min(start, node.length));
-    r.setEnd(node, Math.min(end, node.length));
+    r.setStart(a.node, a.offset);
+    r.setEnd(b.node, b.offset);
     var sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(r);
   }
 
   function placeCaret(div, offset) {
-    var node = (div.firstChild && div.firstChild.nodeType === 3) ? div.firstChild : null;
+    var at = seek(div, offset);
     var r = document.createRange();
-    if (node) r.setStart(node, Math.min(offset, node.length));
+    if (at) r.setStart(at.node, at.offset);
     else r.setStart(div, 0);
     r.collapse(true);
     var sel = window.getSelection();
