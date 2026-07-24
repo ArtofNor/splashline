@@ -202,6 +202,11 @@ main { padding: 2rem 1rem; }
   text-decoration: underline;
   text-underline-offset: 0.2em;
   margin-top: 1.2em;
+  /* And a little air below, so a description or beat written straight under a
+     page heading (rather than inside a panel) doesn't crowd it. Collapses
+     against a following panel's own margin-top, so it only fills the gap where
+     there isn't one already. */
+  margin-bottom: 0.5em;
 }
 /* The gap is a margin, not spaces, so the underline breaks across it the way
    Preview's separate .cp-no and .cp-slug spans do. */
