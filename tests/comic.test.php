@@ -119,3 +119,11 @@ $html = $render("# A\n\n## He was *quiet* and **firm** and ***both***.\n");
 check(str_contains($html, '<em>quiet</em>'), 'italic emphasis');
 check(str_contains($html, '<strong>firm</strong>'), 'bold emphasis');
 check(str_contains($html, '<strong><em>both</em></strong>'), 'bold-italic nests properly');
+
+// --- The page number, carried on the sheet ------------------------------------
+// A thumbnail or an outline shouldn't have to re-derive this: working it out
+// means knowing that the writer's first label anchors the count.
+$html = $render("# PAGE 22 - EXT. ROOF - NIGHT\n\n## A panel.\n\n# EXT. STREET - NIGHT\n\n## Another.\n");
+preg_match_all('/data-page="(\d+)"/', $html, $m);
+check($m[1] === ['22', '23'], "data-page follows the writer's anchor");
+check(str_contains($html, '<span class="cp-no">PAGE 23</span>'), 'and agrees with the printed heading');

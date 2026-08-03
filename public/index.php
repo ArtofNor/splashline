@@ -193,6 +193,7 @@ if ($path !== null && is_file($path)) {
     <a href="?action=new&amp;kind=screenplay">＋ Screenplay</a>
     <a href="?action=new&amp;kind=comic">＋ Comic</a>
     <?php if ($action === 'view' && $file !== ''): ?>
+      <button type="button" id="overview" aria-pressed="false">Pages</button>
       <a href="?action=edit&f=<?= urlencode($file) ?>">Edit</a>
       <?php
       // One Export control. <details> rather than a scripted menu: it opens on
@@ -272,6 +273,7 @@ if ($path !== null && is_file($path)) {
         echo (new Renderer())->toHtml((new FountainParser())->parse($content));
     }
   ?>
+  <script src="overview.js"></script>
 <?php else: ?>
   <p class="empty">Not found. <a href="?">Back to your scripts.</a></p>
 <?php endif; ?>

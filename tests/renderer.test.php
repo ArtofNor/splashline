@@ -57,3 +57,8 @@ check(!str_contains($pages[1], 'dual-row') && str_contains($pages[2] ?? '', 'dua
 // A dual cue with nothing before it degrades to a normal speech.
 $html = $render("MARCUS ^\nAlone.\n");
 check(!str_contains($html, 'dual-row'), 'unpaired dual cue renders normally');
+
+// A screenplay's page number is measured by paginate() rather than written, but
+// it rides on the sheet the same way so an overview can label it.
+preg_match_all('/data-page="(\d+)"/', $render(str_repeat("Action line.\n\n", 80)), $m);
+check($m[1] === ['1', '2', '3'], 'each sheet carries its page number');

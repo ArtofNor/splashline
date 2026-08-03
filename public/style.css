@@ -63,6 +63,19 @@ body {
 .topbar nav { display: flex; gap: 1rem; margin-left: auto; }
 .topbar nav a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
 .topbar nav a:hover { text-decoration: underline; }
+/* A control rather than a link — it changes this page instead of going to
+   another one — dressed as one so the bar stays of a piece. */
+.topbar nav button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--accent);
+  cursor: pointer;
+}
+.topbar nav button:hover { text-decoration: underline; }
+.topbar nav button[aria-pressed="true"] { text-decoration: underline; font-weight: 600; }
 
 /* --- Export menu ------------------------------------------------------------ */
 /* A <details> menu, so it opens, closes and takes focus with no script. */
@@ -478,6 +491,67 @@ main { padding: 2rem 1rem; }
 .cc-key { color: var(--muted); }
 .cc-note { color: #8a7b52; font-style: italic; margin: 1em auto; max-width: 5in; }
 .cc-footer { margin-top: auto; }
+
+/* --- Page overview --------------------------------------------------------- */
+/* The whole script at a glance, for finding page 74 without scrolling to it.
+   There is nothing to build a thumbnail out of: the sheets are already on the
+   page, so the overview is the same sheets shrunk into a grid. Nothing is
+   cloned and nothing is drawn twice, which is also why a thumbnail can never
+   show something the page below it doesn't.
+
+   zoom rather than transform: it takes part in layout, so each sheet still
+   sizes its own grid cell. A transform would need a wrapper element per sheet
+   and that would mean changing the renderers for a screen-only view. */
+@media screen {
+  main.is-grid {
+    --thumb: 0.2;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: 1.5rem 1rem;
+    align-items: start;
+    max-width: 72rem;
+    margin: 0 auto;
+  }
+  /* The renderers wrap their sheets; display: contents lifts those wrappers
+     out of the way so the sheets themselves are the grid items. */
+  main.is-grid .comic,
+  main.is-grid .screenplay { display: contents; }
+  main.is-grid .comic-stats { grid-column: 1 / -1; margin: 0; }
+  main.is-grid .sheet {
+    zoom: var(--thumb);
+    position: relative;
+    cursor: pointer;
+    margin: 0;
+    outline: 1px solid transparent;
+  }
+  main.is-grid .sheet:hover { outline-color: var(--accent); }
+  /* The caption sits inside a shrunken sheet, so it is sized back up by the
+     same factor to stay legible however small the thumbnails get. It rides
+     within the sheet rather than below it because content-visibility brings
+     paint containment with it, which clips anything hanging outside. */
+  main.is-grid .sheet::after {
+    content: attr(data-page);
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0.3em 0;
+    font-size: calc(0.8rem / var(--thumb));
+    text-align: center;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.55);
+  }
+  main.is-grid .comic-cover::after { content: "Cover"; }
+  main.is-grid .title-page::after { content: "Title"; }
+
+  /* A hundred sheets are in the DOM whether or not the grid is open, so this
+     pays off in ordinary Preview too: off-screen sheets skip layout and paint,
+     and the size hint is exact rather than a guess, being the sheet itself. */
+  .sheet {
+    content-visibility: auto;
+    contain-intrinsic-size: 8.5in 11in;
+  }
+}
 
 /* --- Print / PDF ----------------------------------------------------------- */
 @media print {

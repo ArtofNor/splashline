@@ -61,8 +61,6 @@ final class ComicRenderer
         $num = 1;
 
         foreach ($pages as $i => $p) {
-            $out .= "<section class=\"comic-page sheet\">\n";
-
             $labelNum = $this->labelNumber($p['slug']);
             $warn = '';
             if ($labelNum !== null) {
@@ -72,6 +70,13 @@ final class ComicRenderer
                 }
                 $num = $labelNum;
             }
+
+            // The number this page ends up with, carried on the sheet itself.
+            // Working it out means knowing the anchoring rules above, so any
+            // surface that wants to label a page — a thumbnail overview here,
+            // something else in an app built on this — reads it rather than
+            // counting sheets and disagreeing with the printed script.
+            $out .= "<section class=\"comic-page sheet\" data-page=\"" . $num . "\">\n";
 
             $out .= '<header class="cp-head">';
             if (preg_match('/^PAGE\b/i', $p['slug'])) {

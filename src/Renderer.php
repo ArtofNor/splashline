@@ -60,7 +60,10 @@ final class Renderer
         $tokens = $this->annotateDual($parsed['tokens']);
 
         foreach ($this->paginate($tokens) as $pageNo => $page) {
-            $out .= "<div class=\"page sheet\">\n";
+            // Unlike a comic's, this number is measured rather than written —
+            // it is whatever paginate() made it. It rides on the sheet so a
+            // thumbnail or an outline can label it without paginating again.
+            $out .= "<div class=\"page sheet\" data-page=\"" . ($pageNo + 1) . "\">\n";
             // Industry convention: the title page and first script page are
             // unnumbered; from the second script page the number sits in the
             // top-right margin as "2.".
