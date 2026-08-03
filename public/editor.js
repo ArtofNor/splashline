@@ -9,8 +9,8 @@
  *
  * Design notes:
  *  - A line's source is the writer's own text. Where the view differs from it
- *    — a comic's heading marks, a panel label, the asterisks around bold — the
- *    source is kept on the line and sourceOf() is what saving, parsing and
+ *    — a comic's heading marks, a panel label, the asterisks around emphasis —
+ *    the source is kept on the line and sourceOf() is what saving, parsing and
  *    editing all read. getText() reassembles the file from those.
  *  - The line the caret is in is never rendered: it holds exactly its source
  *    (see `live`). Typing therefore always lands in plain text, which is what
@@ -171,20 +171,39 @@
     return src === null ? div.textContent : src;
   }
 
-  var BOLD = /\*\*([^*]+)\*\*/g;
+  /**
+   * The three asterisk wrappers both parsers read, longest first so that
+   * ***both*** is never seen as **bo** with a stray asterisk on each end.
+   * The count of asterisks is the emphasis: one italic, two bold, three both.
+   */
+  var EMPH = /\*\*\*([^*]+)\*\*\*|\*\*([^*]+)\*\*|\*([^*]+)\*/g;
 
-  /** Append text to a node, as <strong> where it is wrapped in asterisks. */
+  /** The text a match wraps, and how many asterisks are doing the wrapping. */
+  function marks(m) {
+    var inner = m[1] || m[2] || m[3];
+    return { inner: inner, n: (m[0].length - inner.length) / 2 };
+  }
+
+  /** Append text to a node, emphasised where it is wrapped in asterisks. */
   function rich(parent, text, hide) {
     var last = 0;
     var m;
-    BOLD.lastIndex = 0;
-    while ((m = BOLD.exec(text)) !== null) {
+    EMPH.lastIndex = 0;
+    while ((m = EMPH.exec(text)) !== null) {
       if (m.index > last) {
         parent.appendChild(document.createTextNode(text.slice(last, m.index)));
       }
-      var b = document.createElement('strong');
-      b.textContent = hide ? m[1] : m[0];
-      parent.appendChild(b);
+      var e = marks(m);
+      var node = document.createElement(e.n === 1 ? 'em' : 'strong');
+      if (e.n === 3) {
+        // Bold and italic together, nested the way the renderers nest them.
+        var inner = document.createElement('em');
+        inner.textContent = hide ? e.inner : m[0];
+        node.appendChild(inner);
+      } else {
+        node.textContent = hide ? e.inner : m[0];
+      }
+      parent.appendChild(node);
       last = m.index + m[0].length;
     }
     if (last < text.length) {
@@ -202,13 +221,14 @@
     var seen = 0;
     var last = 0;
     var m;
-    BOLD.lastIndex = 0;
-    while ((m = BOLD.exec(src)) !== null) {
+    EMPH.lastIndex = 0;
+    while ((m = EMPH.exec(src)) !== null) {
+      var e = marks(m);
       var plain = m.index - last;
       if (seen + plain >= offset) return last + (offset - seen);
       seen += plain;
-      if (seen + m[1].length >= offset) return m.index + 2 + (offset - seen);
-      seen += m[1].length;
+      if (seen + e.inner.length >= offset) return m.index + e.n + (offset - seen);
+      seen += e.inner.length;
       last = m.index + m[0].length;
     }
     return last + (offset - seen);
@@ -376,7 +396,7 @@
   var live = null;
 
   function signature(name, isLive, src) {
-    return name + ' ' + (isLive ? '1' : '0') + ' ' + src;
+    return name + '\u0001' + (isLive ? '1' : '0') + '\u0001' + src;
   }
 
   function span(cls, text) {
@@ -637,16 +657,19 @@
   // --- Inline emphasis -------------------------------------------------------
 
   /**
-   * Cmd/Ctrl+B wraps the selection in Markdown bold — the same **...** both
-   * parsers already read, so the shortcut writes the source rather than a
-   * separate notion of formatting.
+   * Cmd/Ctrl+B and Cmd/Ctrl+I wrap the selection in Markdown emphasis — the
+   * same asterisks both parsers already read, so the shortcuts write the
+   * writer's source rather than a separate notion of formatting.
    *
-   * It toggles: the marks are looked for inside the selection and just outside
-   * it, so pressing the key twice on the same words strips them instead of
-   * burying them in a second pair. Selecting across lines is left alone, since
-   * ** doesn't span a line break in either parser.
+   * They toggle, and they compose. The asterisks already hugging the selection
+   * say what it is — one italic, two bold, three both — which is the same
+   * number as the two bits being toggled here, so bolding italic text raises
+   * it to three rather than burying it in a second pair. Selecting across
+   * lines is left alone: asterisks don't span a line break in either parser.
+   *
+   * @param bit 1 to toggle italic, 2 to toggle bold.
    */
-  function toggleBold() {
+  function toggleEmphasis(bit) {
     var sel = window.getSelection();
     if (!sel.rangeCount) return false;
     var range = sel.getRangeAt(0);
@@ -657,22 +680,24 @@
     var text = from.div.textContent;
     var a = from.offset;
     var b = to.offset;
-    var inner = text.slice(a, b);
-    var out;
 
-    if (inner.length >= 4 && inner.slice(0, 2) === '**' && inner.slice(-2) === '**') {
-      out = [text.slice(0, a) + inner.slice(2, -2) + text.slice(b), a, b - 4];
-    } else if (a >= 2 && text.slice(a - 2, a) === '**' && text.slice(b, b + 2) === '**') {
-      out = [text.slice(0, a - 2) + inner + text.slice(b + 2), a - 2, b - 2];
-    } else {
-      out = [text.slice(0, a) + '**' + inner + '**' + text.slice(b), a + 2, b + 2];
-    }
+    // Marks the writer happened to select count as wrapping, not as content —
+    // double-clicking through **loud** should still un-bold it.
+    while (a < b && text.charAt(a) === '*' && text.charAt(b - 1) === '*') { a++; b--; }
 
-    setDivText(from.div, out[0]);
+    var k = 0;
+    while (k < 3 && a - 1 - k >= 0 && text.charAt(a - 1 - k) === '*' && text.charAt(b + k) === '*') k++;
+
+    var want = k ^ bit;
+    var mark = '***'.slice(0, want);
+    var out = text.slice(0, a - k) + mark + text.slice(a, b) + mark + text.slice(b + k);
+    var na = a - k + want;
+
+    setDivText(from.div, out);
     restyle();
     // An empty selection leaves the caret between the new marks, ready to type.
-    if (out[1] === out[2]) placeCaret(from.div, out[1]);
-    else selectRange(from.div, out[1], out[2]);
+    if (a === b) placeCaret(from.div, na);
+    else selectRange(from.div, na, na + (b - a));
     return true;
   }
 
@@ -730,14 +755,17 @@
   });
 
   editor.addEventListener('keydown', function (e) {
-    // Cmd/Ctrl+B. Always swallowed, even when the selection is one this can't
-    // act on: the browser's own bold inserts a <b> element, and a line here is
-    // one flat string of the writer's source with no elements in it at all.
-    if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.key === 'b' || e.key === 'B')
-        && !composing) {
-      e.preventDefault();
-      if (toggleBold()) markDirty();
-      return;
+    // Cmd/Ctrl+B and Cmd/Ctrl+I. Always swallowed, even when the selection is
+    // one these can't act on: the browser's own bold inserts a <b> element,
+    // and a line here is one flat string of the writer's source with no
+    // elements in it at all.
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && !composing) {
+      var key = e.key.toLowerCase();
+      if (key === 'b' || key === 'i') {
+        e.preventDefault();
+        if (toggleEmphasis(key === 'b' ? 2 : 1)) markDirty();
+        return;
+      }
     }
 
     // Backspace at the head of a marked line takes the level off instead of
