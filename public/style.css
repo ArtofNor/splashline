@@ -426,13 +426,15 @@ main { padding: 2rem 1rem; }
   gap: 0.5em;
   margin: 0.9em 0;
 }
+/* The cue is uppercase and sits in its own column — that is what names it, the
+   way a screenplay's character cue is named by its indent rather than by
+   weight. The editor paints its .cue the same way. */
 .beat-label {
   flex: 0 0 2.2in;
-  font-weight: bold;
   text-transform: uppercase;
 }
-.beat-no { color: var(--muted); font-weight: normal; }
-.beat-ext { color: var(--muted); font-weight: normal; }
+.beat-no { color: var(--muted); }
+.beat-ext { color: var(--muted); }
 .beat-text { width: 3.3in; }
 .beat-text p { margin: 0 0 0.9em; }
 .beat-text p:last-child { margin-bottom: 0; }
