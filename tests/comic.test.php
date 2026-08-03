@@ -111,3 +111,11 @@ check(Support::isComicFile('anything.fountain', "### NOI:\tHi\n") === true, 'con
 check(Support::safeFilename("Act 1: Dawn") === 'Act-1-Dawn.fountain', 'colon title sanitised');
 check(Support::safeFilename("Night's End", true) === 'Nights-End.md', 'comic default extension');
 check(Support::safeFilename('!!!') === null, 'punctuation-only title rejected');
+
+// --- Inline emphasis ----------------------------------------------------------
+// The same asterisks the screenplay renderer reads, so a writer moving between
+// the two formats doesn't have to learn a second set of marks.
+$html = $render("# A\n\n## He was *quiet* and **firm** and ***both***.\n");
+check(str_contains($html, '<em>quiet</em>'), 'italic emphasis');
+check(str_contains($html, '<strong>firm</strong>'), 'bold emphasis');
+check(str_contains($html, '<strong><em>both</em></strong>'), 'bold-italic nests properly');

@@ -12,6 +12,7 @@ check(str_contains($html, '<em>quiet</em>'), 'italic emphasis');
 check(str_contains($html, '<strong>firm</strong>'), 'bold emphasis');
 check(str_contains($html, '<u>sure</u>'), 'underline emphasis');
 check(!str_contains($html, 'fix later'), 'notes stripped from output');
+check(str_contains($render("He was ***both***.\n"), '<strong><em>both</em></strong>'), 'bold-italic nests properly');
 
 // --- Sections shown dimmed, synopses hidden ----------------------------------
 $html = $render("# Act One\n\n= Secret plan.\n\nAction.\n");

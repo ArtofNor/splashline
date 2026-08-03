@@ -314,6 +314,9 @@ final class ComicRenderer
     private function inline(string $text): string
     {
         $text = htmlspecialchars($text, ENT_QUOTES);
+        // Order matters: bold-italic before bold before italic, or ***both***
+        // is read as **bo** with a loose asterisk at each end.
+        $text = preg_replace('/\*\*\*(.+?)\*\*\*/s', '<strong><em>$1</em></strong>', $text) ?? $text;
         $text = preg_replace('/\*\*(.+?)\*\*/s', '<strong>$1</strong>', $text) ?? $text;
         $text = preg_replace('/\*(.+?)\*/s', '<em>$1</em>', $text) ?? $text;
         // [bracketed notes] are working marks; render them dimmed but visible.
