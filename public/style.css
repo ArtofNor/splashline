@@ -491,6 +491,11 @@ main { padding: 2rem 1rem; }
   }
   .title-page,
   .page { page-break-after: always; }
+  /* The cover ends its sheet the way the title page does. Its 11in minimum
+     makes it look like a whole sheet already, but a long credits block or a
+     standing note grows it past that, and without the break the first comic
+     page starts in the leftover and straddles the sheet below. */
+  .comic-cover,
   .comic-page { page-break-after: always; }
   .comic-stats { display: none; }
 }
