@@ -44,6 +44,20 @@ and one page still roughly equals one minute. Text is measured in display
 columns, not bytes, so scripts with Lao, Thai, or other non-Latin dialogue
 paginate correctly, and titles in any script become valid filenames.
 
+Pasting a script copied out of a PDF reshapes it on the way in: the printed
+margins come off, the page numbers and CONTINUED and (MORE) lines go, the
+paragraphs the page width broke are rejoined, a speech split across a page
+break is sewn back into one, and a title page becomes the Fountain keys that
+produce one. Extractors that drop the blank lines between elements leave text
+Fountain cannot read at all; there the block breaks are rebuilt from the lines
+themselves, since a cue, a heading and a transition each say what they are, and
+a speech ends at a line too wide for the dialogue column or one that opens in
+capitals the way action does.
+
+Text that is already a script is left exactly as it is. Only evidence nobody
+types — printed margins, printer's furniture, or a long run of lines with no
+blank lines in it — turns the shaping on.
+
 ## Comic scripts (.md)
 
 Two heading levels and a cue, and you know the whole format:
