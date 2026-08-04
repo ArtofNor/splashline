@@ -24,6 +24,16 @@ final class FountainParser
     /** Lines that begin a scene heading when not forced with a leading '.'. */
     private const SCENE_PREFIXES = '(INT|EXT|EST|INT\.?\/EXT|I\/E)';
 
+    /**
+     * What ends an unforced transition. Fountain names one by its trailing
+     * "TO:", which misses every transition that ends a scene on nothing —
+     * CUT TO BLACK:, FADE TO BLACK., FADE OUT. Those are transitions by each
+     * other measure the parser applies (isolated, uppercase, right-aligned in
+     * print), so they are read as such rather than dropping to action.
+     * Anything stranger still forces with a leading '>'.
+     */
+    private const TRANSITION_END = '/(TO:|TO BLACK[.:]?|FADE OUT[.:]?)$/';
+
     /** @return array{title: array<string, list<string>>, tokens: list<array<string, mixed>>} */
     public function parse(string $text): array
     {
@@ -160,7 +170,7 @@ final class FountainParser
                 $tokens[] = ['type' => 'transition', 'text' => trim(substr($trimmed, 1))];
                 continue;
             }
-            if ($prevBlank && $nextBlank && $this->isUpper($trimmed) && preg_match('/TO:$/', $trimmed)) {
+            if ($prevBlank && $nextBlank && $this->isUpper($trimmed) && preg_match(self::TRANSITION_END, $trimmed)) {
                 $tokens[] = ['type' => 'transition', 'text' => $trimmed];
                 continue;
             }

@@ -44,6 +44,12 @@
     return isUpper(core);
   }
 
+  // What ends an unforced transition — mirrors TRANSITION_END in
+  // FountainParser. Fountain's own "TO:" misses the transitions that end a
+  // scene on nothing (CUT TO BLACK:, FADE OUT.), which are transitions by
+  // every other measure and are read as such here too.
+  var TRANSITION_END = /(TO:|TO BLACK[.:]?|FADE OUT[.:]?)$/;
+
   // Sahtu comic scripts classify by Markdown heading level instead. A script
   // started from the Comic button says so outright, which is the only thing
   // that works on an empty page: the house form (bare "#" page, unlabelled
@@ -130,7 +136,7 @@
       if (t.charAt(0) === '=') { out[i] = 'synopsis'; inDialogue = false; continue; }
       if (/^>\s*.*<$/.test(t)) { out[i] = 'centered'; inDialogue = false; continue; }
       if (t.charAt(0) === '>') { out[i] = 'transition'; inDialogue = false; continue; }
-      if (prevBlank && nextBlank && isUpper(t) && /TO:$/.test(t)) { out[i] = 'transition'; inDialogue = false; continue; }
+      if (prevBlank && nextBlank && isUpper(t) && TRANSITION_END.test(t)) { out[i] = 'transition'; inDialogue = false; continue; }
       if (/^\.[^.]/.test(t)) { out[i] = 'scene-heading'; inDialogue = false; continue; }
       if (prevBlank && /^(int|ext|est|int\.?\/ext|i\/e)[. ]/i.test(t)) { out[i] = 'scene-heading'; inDialogue = false; continue; }
       if (t.charAt(0) === '~') { out[i] = 'lyric'; inDialogue = false; continue; }

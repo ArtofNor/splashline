@@ -83,3 +83,24 @@ check(($cues[1]['text'] ?? '') === 'MAI (V.O.)', 'cue extension preserved');
 $r = $p->parse("Action one.\n/* cut this\nand this */\nAction two.\n");
 $texts = array_column(array_filter($r['tokens'], fn ($t) => $t['type'] === 'action'), 'text');
 check(!str_contains(implode(' ', $texts), 'cut this'), 'boneyard removed');
+
+// --- Transitions that end a scene on nothing ---------------------------------
+// Fountain names a transition by its trailing "TO:", which none of these have.
+// They are transitions by every other measure, and a writer who types one
+// expects it in the right margin, not flush left as action.
+$type = function (string $line) use ($p): string {
+    $tokens = $p->parse("Action.\n\n$line\n\nMore action.\n")['tokens'];
+    foreach ($tokens as $t) {
+        if (($t['text'] ?? '') === $line) return $t['type'];
+    }
+    return '?';
+};
+check($type('CUT TO BLACK:') === 'transition', 'CUT TO BLACK: is a transition');
+check($type('FADE TO BLACK.') === 'transition', 'FADE TO BLACK. is a transition');
+check($type('FADE OUT.') === 'transition', 'FADE OUT. is a transition');
+check($type('SMASH CUT TO:') === 'transition', 'the plain TO: form still works');
+
+// The widening must not swallow action. A cue is uppercase and isolated too,
+// so the ending is the only thing keeping these apart.
+check($type('HE FADES OUT OF SIGHT.') === 'action', 'uppercase action is not a transition');
+check($type('THE ROOM GOES BLACK.') === 'action', 'ending on BLACK. alone is not enough');
