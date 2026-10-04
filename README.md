@@ -33,6 +33,10 @@ Run the tests the same way, no dependencies:
 php tests/run.php
 ```
 
+The paste formatter is JavaScript, so its tests run under Node and are folded
+into the same totals. Node is not needed to run the app; without it those tests
+report themselves as skipped rather than passing quietly.
+
 ## Screenplays (.fountain)
 
 Standard Fountain: scene headings, action, character cues, parentheticals,

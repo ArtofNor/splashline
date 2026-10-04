@@ -263,6 +263,8 @@ if ($path !== null && is_file($path)) {
     <input id="original" type="hidden" value="<?= h($file) ?>">
     <input id="kind" type="hidden" value="<?= h($kind) ?>">
   </div>
+  <!-- Before editor.js: it reads its classification primitives off Paste. -->
+  <script src="paste.js"></script>
   <script src="editor.js"></script>
 
 <?php elseif ($action === 'view' && $path !== null): ?>

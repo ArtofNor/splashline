@@ -42,5 +42,33 @@ foreach (glob(__DIR__ . '/*.test.php') ?: [] as $file) {
     require $file;
 }
 
+/**
+ * The paste formatter is JavaScript, so its tests run under Node and report
+ * their counts back on a "#counts pass fail" line. Node is not a dependency of
+ * the app and is not required to run it — without it those tests are announced
+ * as skipped rather than silently counted as passing, since a suite that goes
+ * quiet when a runner is missing is worse than one that admits the gap.
+ */
+foreach (glob(__DIR__ . '/*.test.js') ?: [] as $file) {
+    echo '· ', basename($file);
+    $out = [];
+    $status = 0;
+    exec('command -v node >/dev/null 2>&1 && node ' . escapeshellarg($file) . ' 2>&1', $out, $status);
+    $text = implode("\n", $out);
+
+    if (!preg_match('/^#counts (\d+) (\d+)$/m', $text, $m)) {
+        echo "  (skipped — needs node)\n";
+        continue;
+    }
+    echo "\n";
+    // Everything but the counts line is a failure report; pass it straight on.
+    $reported = trim(str_replace($m[0], '', $text));
+    if ($reported !== '') {
+        fwrite(STDERR, $reported . "\n");
+    }
+    $GLOBALS['pass'] += (int) $m[1];
+    $GLOBALS['fail'] += (int) $m[2];
+}
+
 echo "\n{$GLOBALS['pass']} passed, {$GLOBALS['fail']} failed\n";
 exit($GLOBALS['fail'] === 0 ? 0 : 1);
