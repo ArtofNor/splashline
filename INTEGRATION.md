@@ -69,9 +69,15 @@ is shell.
 - `public/style.css` - split it mentally into two halves:
   1. **App chrome** (topbar, listing, editor bar, dark background): restyle
      freely to the site's design system.
-  2. **The paper** (`.sheet`, `.screenplay`, `.page`, `.title-page`, comic
-     `.comic*`, `.beat*`, `.p-badge`, `.cp-*`): DO NOT restyle the
-     screenplay internals. See the contract below.
+  2. **The paper** (`.sheet`, `.screenplay`, `.page`, `.title-page`): DO NOT
+     restyle the screenplay internals. See the contract below.
+- `public/comic.css` - the comic view on its own: everything ComicRenderer's
+  output needs, scoped to `.comic`. Load it after `style.css`, or alone on a
+  site that only shows comics. Copy it verbatim and theme it by setting the
+  `--comic-*` variables on `.comic` (font, paper, ink, muted, accent, note,
+  caption, badge, warn, sheet shadow). Their defaults read the host's
+  `--script-font`, `--paper`, `--ink`, `--muted` and `--accent`, so a site
+  built from `style.css` looks the same without setting any.
 
 ## The pagination contract (do not break)
 

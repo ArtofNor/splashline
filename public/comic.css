@@ -1,0 +1,174 @@
+/*
+ * Splashline comic view: the Sahtu comic script as a Courier manuscript, one
+ * sheet per comic page, balloons numbered per page for lettering. This is the
+ * whole look of ComicRenderer's output and nothing else, so a site can render
+ * comics without taking the rest of style.css.
+ *
+ * Scoped to .comic (the renderer's wrapper). Inner rules use :where(.comic),
+ * so they keep the specificity they had inside style.css and a host's own
+ * rules still win where they used to.
+ *
+ * Theme it by setting these on .comic. The defaults read the host's
+ * --script-font, --paper, --ink, --muted and --accent when it has them, which
+ * is how Splashline's own pages (and any site built from style.css) look
+ * unchanged.
+ */
+:where(.comic) {
+  --comic-font: var(--script-font, "Courier New", Courier, monospace);
+  --comic-paper: var(--paper, #fff);
+  --comic-ink: var(--ink, #1a1a1a);
+  --comic-muted: var(--muted, #888);
+  --comic-accent: var(--accent, #7a5cff);
+  --comic-note: #8a7b52;
+  --comic-caption-bg: #f2f0e9;
+  --comic-caption-border: #ddd8c8;
+  --comic-badge: #6b6b6b;
+  --comic-warn: #a33;
+  --comic-warn-border: #d99;
+  --comic-sheet-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+/* The sheet itself, for hosts without style.css. Same values as style.css's
+   .sheet, so loading both changes nothing. */
+:where(.comic) .sheet {
+  max-width: 8.5in;
+  margin: 0 auto 1.5rem;
+  background: var(--comic-paper);
+  color: var(--comic-ink);
+  box-shadow: var(--comic-sheet-shadow);
+}
+
+/* --- Comic script view ------------------------------------------------------ */
+/* Comic scripts as Courier manuscript, same face as the screenplay side. One
+   sheet per comic page; speeches numbered per page for lettering. */
+.comic {
+  font-family: var(--comic-font);
+  font-size: 12pt;
+  line-height: 1.4;
+}
+:where(.comic) .comic-stats {
+  max-width: var(--page-width);
+  margin: 0 auto 1rem;
+  color: var(--comic-muted);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.85rem;
+}
+.comic .sheet { padding: 0.75in 1in; }
+/* Letter proportions: min-height so a dense page can run long rather than
+   clip, but every sheet reads as 8.5x11 paper. */
+:where(.comic) .comic-page { min-height: 11in; }
+
+:where(.comic) .cp-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 1.4em;
+}
+:where(.comic) .cp-no, :where(.comic) .cp-slug {
+  font-weight: bold;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  white-space: nowrap;
+}
+:where(.comic) .cp-badge {
+  font-size: 0.7rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--comic-paper);
+  background: var(--comic-accent);
+  border-radius: 4px;
+  padding: 0.1rem 0.45rem;
+  align-self: center;
+}
+:where(.comic) .cp-count { margin-left: auto; color: var(--comic-muted); font-size: 0.85em; white-space: nowrap; }
+:where(.comic) .cp-warn {
+  font-size: 0.7rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 600;
+  color: var(--comic-warn);
+  border: 1px solid var(--comic-warn-border);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  align-self: center;
+  white-space: nowrap;
+}
+
+:where(.comic) .panel { margin-bottom: 1.4em; }
+:where(.comic) .panel-desc { margin: 0 0 0.7em; }
+:where(.comic) .panel-label { text-transform: uppercase; }
+:where(.comic) .p-badge {
+  font-size: 0.65rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--comic-paper);
+  background: var(--comic-badge);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  vertical-align: 0.1em;
+  white-space: nowrap;
+}
+:where(.comic) .p-badge.splash { background: var(--comic-accent); }
+
+/* A speech: "1. TAG:" at the left, the balloon text in its own column.
+   Numbering runs per page, across panels, the way letterers key balloons. */
+:where(.comic) .beat {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  margin: 0.9em 0;
+}
+/* The cue is uppercase and sits in its own column — that is what names it, the
+   way a screenplay's character cue is named by its indent rather than by
+   weight. The editor paints its .cue the same way. */
+:where(.comic) .beat-label {
+  flex: 0 0 2.2in;
+  text-transform: uppercase;
+}
+:where(.comic) .beat-no { color: var(--comic-muted); }
+:where(.comic) .beat-ext { color: var(--comic-muted); }
+:where(.comic) .beat-text { width: 3.3in; }
+:where(.comic) .beat-text p { margin: 0 0 0.9em; }
+:where(.comic) .beat-text p:last-child { margin-bottom: 0; }
+:where(.comic) .beat.sfx .beat-text { font-style: italic; letter-spacing: 0.1em; font-weight: bold; }
+:where(.comic) .beat.caption .beat-text {
+  background: var(--comic-caption-bg);
+  border: 1px solid var(--comic-caption-border);
+  padding: 0.1em 0.45em;
+  border-radius: 2px;
+}
+:where(.comic) .beat-wc {
+  font-size: 0.7rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--comic-warn);
+  border: 1px solid var(--comic-warn-border);
+  border-radius: 4px;
+  padding: 0 0.35rem;
+  white-space: nowrap;
+}
+
+:where(.comic) .comic-note { color: var(--comic-note); font-style: italic; margin: 0.3em 0; }
+:where(.comic) .held { color: var(--comic-note); }
+
+/* The cover sheet: a letter-proportioned front page built from the preamble. */
+:where(.comic) .comic-cover {
+  min-height: 11in;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+:where(.comic) .cc-main { margin: auto 0; }
+:where(.comic) .cc-title {
+  font-size: 12pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  margin: 0 0 2em;
+}
+:where(.comic) .cc-line { margin: 0.5em 0; }
+:where(.comic) .cc-key { color: var(--comic-muted); }
+:where(.comic) .cc-note { color: var(--comic-note); font-style: italic; margin: 1em auto; max-width: 5in; }
+:where(.comic) .cc-footer { margin-top: auto; }

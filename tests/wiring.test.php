@@ -40,3 +40,13 @@ check($editorAt !== false && $pasteAt !== false && $pasteAt < $editorAt, 'paste.
 $paste = (string) file_get_contents(__DIR__ . '/../public/paste.js');
 $code = preg_replace(['#/\*.*?\*/#s', '#//[^\n]*#'], '', $paste) ?? $paste;
 check(preg_match('/\b(document|window|navigator)\b/', $code) === 0, 'paste.js touches no DOM');
+
+// The comic look lives in comic.css and loads after style.css, so the comic
+// rules keep winning where they did when they were part of it.
+$styleAt = strpos($index, 'href="style.css"');
+$comicAt = strpos($index, 'href="comic.css"');
+check($comicAt !== false, 'index.php loads comic.css');
+check($styleAt !== false && $comicAt !== false && $styleAt < $comicAt, 'comic.css loads after style.css');
+$comicCss = (string) file_get_contents(__DIR__ . '/../public/comic.css');
+check(!str_contains((string) file_get_contents(__DIR__ . '/../public/style.css'), '.beat-label {'), 'style.css no longer carries the comic rules');
+check(str_contains($comicCss, ':where(.comic) .beat-label'), 'comic.css carries them, scoped to .comic');

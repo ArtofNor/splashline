@@ -185,6 +185,7 @@ if ($path !== null && is_file($path)) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Splashline<?= $file !== '' ? ' · ' . h($file) : '' ?></title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="comic.css">
 </head>
 <body>
 <header class="topbar">
