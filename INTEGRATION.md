@@ -75,7 +75,7 @@ is shell.
   output needs, scoped to `.comic`. Load it after `style.css`, or alone on a
   site that only shows comics. Copy it verbatim and theme it by setting the
   `--comic-*` variables on `.comic` (font, paper, ink, muted, accent, note,
-  caption, badge, warn, sheet shadow). Their defaults read the host's
+  caption, badge, warn, sheet shadow, page width). Their defaults read the host's
   `--script-font`, `--paper`, `--ink`, `--muted` and `--accent`, so a site
   built from `style.css` looks the same without setting any.
 

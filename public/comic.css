@@ -26,12 +26,13 @@
   --comic-warn: #a33;
   --comic-warn-border: #d99;
   --comic-sheet-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --comic-page-width: var(--page-width, 8.5in);
 }
 
 /* The sheet itself, for hosts without style.css. Same values as style.css's
    .sheet, so loading both changes nothing. */
 :where(.comic) .sheet {
-  max-width: 8.5in;
+  max-width: var(--comic-page-width);
   margin: 0 auto 1.5rem;
   background: var(--comic-paper);
   color: var(--comic-ink);
@@ -47,7 +48,7 @@
   line-height: 1.4;
 }
 :where(.comic) .comic-stats {
-  max-width: var(--page-width);
+  max-width: var(--comic-page-width);
   margin: 0 auto 1rem;
   color: var(--comic-muted);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
