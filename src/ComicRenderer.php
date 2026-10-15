@@ -124,22 +124,46 @@ final class ComicRenderer
             // Each panel's type keywords, read up front: whether a splash
             // shares its page depends on what the other panels are. An INSET
             // sits on a splash rather than beside it, so it doesn't count.
-            // Consecutive TIER. panels share a row; the count is per page and
-            // goes on the sheet, never into the script, where it would go stale.
+            // Consecutive TIER. panels share a row, and so do consecutive
+            // panels with the same "TIER n.", so two rows can sit back to back.
+            // Each row gets its own data-tier, counted per page in order of
+            // appearance — never the writer's n, which a bare run could share.
+            // That count goes on the sheet, never into the script, where it
+            // would go stale. A number that comes back after another tier
+            // starts a new row and is flagged.
             $kinds = [];
             $tiers = [];
+            $splitTier = [];
             $beside = 0;
             $tier = 0;
+            $key = null;    // The previous panel's tier: null, '' for bare, or its n.
+            $last = null;   // The most recent tier of any kind on this page.
+            $had = [];      // Numbered tiers that already have a row here.
             foreach ($p['panels'] as $j => $panel) {
                 [$types] = $this->panelTypes($panel['desc']);
                 $kinds[$j] = array_map(fn (string $b): string => explode(' (', $b, 2)[0], $types);
                 $beside += in_array('INSET', $kinds[$j], true) ? 0 : 1;
-                if (in_array('TIER', $kinds[$j], true)) {
-                    $tier += ($tiers[$j - 1] ?? null) === null ? 1 : 0;
-                    $tiers[$j] = $tier;
-                } else {
-                    $tiers[$j] = null;
+                $own = null;
+                foreach ($kinds[$j] as $kw) {
+                    if (preg_match('/^TIER(?: (\d+))?$/', $kw, $t)) {
+                        $own = $t[1] ?? '';
+                        break;
+                    }
                 }
+                $tiers[$j] = null;
+                $splitTier[$j] = null;
+                if ($own !== null) {
+                    if ($own !== $key) {
+                        $tier++;
+                        if ($own !== '' && isset($had[$own]) && $last !== $own) {
+                            $splitTier[$j] = $own;
+                        }
+                    }
+                    $tiers[$j] = $tier;
+                    $had[$own] = true;
+                    $last = $own;
+                }
+                $key = $own;
             }
 
             foreach ($p['panels'] as $j => $panel) {
@@ -167,6 +191,10 @@ final class ComicRenderer
                         . $this->inline(strtoupper($kw)) . '</span>';
                 }
                 $layoutWarn = '';
+                if ($splitTier[$j] !== null) {
+                    $layoutWarn .= $this->panelWarn('Panels in one tier sit side by side, so they have to be consecutive',
+                        'Tier ' . $splitTier[$j] . ' is split by another tier');
+                }
                 if ($across && !$p['spread']) {
                     $layoutWarn .= $this->panelWarn('ACROSS runs over the fold, which only a spread has',
                         "This panel crosses the fold, but the page isn't a spread");
@@ -370,6 +398,12 @@ final class ComicRenderer
 
             // An immediate "(placement note)" belongs to this badge.
             $badge = $matched;
+            // "TIER 2." names its row; the number is part of the keyword, not
+            // the start of the description.
+            if ($matched === 'TIER' && preg_match('/\G\s+(\d+)(?![[:alnum:]])/', $desc, $t, 0, $pos)) {
+                $badge .= ' ' . $t[1];
+                $pos += strlen($t[0]);
+            }
             while ($pos < $len && $desc[$pos] === ' ') {
                 $pos++;
             }

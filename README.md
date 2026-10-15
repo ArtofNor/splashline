@@ -100,9 +100,15 @@ NOI (OFF):	Sorry! Borrowing your floor!
   panels share a row, side by side, and the next panel without it starts a
   new full-width row; each panel in a row carries the same `data-tier`
   number, counted per page, and no count is ever written into the script.
+  For rows back to back, number them: `TIER 1.` twice then `TIER 2.` twice
+  is a 2x2 page. Consecutive panels with the same number share a row, the
+  number counts within its page, and `data-tier` still numbers the rows in
+  order rather than echoing the writer's number.
   - Layout chips: an ACROSS panel on a page that isn't `[SPREAD]`, a
     `SPLASH.` sharing its page with other panels (an `INSET` on it is fine),
-    a `SPLASH SPREAD.` on a page that isn't `[SPREAD]`, and a panel with
+    a `SPLASH SPREAD.` on a page that isn't `[SPREAD]`, a numbered tier
+    that comes back after a different tier (`TIER 1`, `TIER 2`, `TIER 1`:
+    "Tier 1 is split by another tier"), and a panel with
     more than 4 balloons (dialogue and captions count; SFX keep their
     balloon numbers but don't count).
 - A caps cue followed by a colon is a beat: dialogue, `SFX:`, or
