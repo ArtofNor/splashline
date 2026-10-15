@@ -35,7 +35,9 @@ final class ComicRenderer
         $panelTotal = 0;
         $balloonTotal = 0;
         $spreads = 0;
+        $printed = 0; // Printed pages, so a spread counts as two.
         foreach ($pages as $p) {
+            $printed += Support::pageSpan($p['spread']);
             $panelTotal += count($p['panels']);
             $spreads += $p['spread'] ? 1 : 0;
             foreach ($p['panels'] as $panel) {
@@ -45,7 +47,7 @@ final class ComicRenderer
 
         $out = "<div class=\"comic\">\n";
 
-        $stats = count($pages) . ' ' . (count($pages) === 1 ? 'page' : 'pages')
+        $stats = $printed . ' ' . ($printed === 1 ? 'page' : 'pages')
             . ' · ' . $panelTotal . ' panels · ' . $balloonTotal . ' balloons';
         if ($spreads > 0) {
             $stats .= ' · ' . $spreads . ' ' . ($spreads === 1 ? 'spread' : 'spreads');
@@ -57,10 +59,12 @@ final class ComicRenderer
         // Page numbering: the writer's first numbered label anchors the count
         // (so an excerpt can start at PAGE 22), unlabeled pages continue from
         // it, and a later label that breaks the sequence gets flagged rather
-        // than silently trusted or silently corrected.
+        // than silently trusted or silently corrected. A spread takes two
+        // numbers, so the page after one starting on 16 is 18.
         $num = 1;
 
         foreach ($pages as $i => $p) {
+            $span = Support::pageSpan($p['spread']);
             $labelNum = $this->labelNumber($p['slug']);
             $warn = '';
             if ($labelNum !== null) {
@@ -70,29 +74,41 @@ final class ComicRenderer
                 }
                 $num = $labelNum;
             }
+            $end = $num + $span - 1;
+            $side = Support::pageSide($num);
 
             // The number this page ends up with, carried on the sheet itself.
             // Working it out means knowing the anchoring rules above, so any
             // surface that wants to label a page — a thumbnail overview here,
             // something else in an app built on this — reads it rather than
-            // counting sheets and disagreeing with the printed script.
-            $out .= "<section class=\"comic-page sheet\" data-page=\"" . $num . "\">\n";
+            // counting sheets and disagreeing with the printed script. So is
+            // the side of the book it lands on, and a spread's last page.
+            $out .= '<section class="comic-page sheet" data-page="' . $num . '"'
+                . ($span > 1 ? ' data-page-end="' . $end . '"' : '')
+                . ' data-side="' . $side . "\">\n";
 
             $out .= '<header class="cp-head">';
             if (preg_match('/^PAGE\b/i', $p['slug'])) {
                 // The writer numbered/labelled the page themselves; don't
                 // print "PAGE N" next to their "PAGE TWO: ...".
                 $out .= '<span class="cp-no">' . $this->inline(strtoupper($p['slug'])) . '</span>';
+                $out .= '<span class="cp-side">' . strtoupper($side) . '</span>';
             } else {
-                $out .= '<span class="cp-no">PAGE ' . $num . '</span>';
+                $out .= '<span class="cp-no">' . ($span > 1 ? 'PAGES ' . $num . '–' . $end : 'PAGE ' . $num) . '</span>';
+                $out .= '<span class="cp-side">' . strtoupper($side) . '</span>';
                 if ($p['slug'] !== '') {
                     $out .= '<span class="cp-slug">' . $this->inline($p['slug']) . '</span>';
                 }
             }
             $out .= $warn;
-            $num++;
+            $num = $end + 1;
             if ($p['spread']) {
                 $out .= '<span class="cp-badge">SPREAD</span>';
+                // A spread that starts on a right page splits across the turn.
+                if ($side === 'right') {
+                    $out .= '<span class="cp-warn" title="A spread has to start on a left page to face its other half">'
+                        . 'Spread starts on a right page</span>';
+                }
             }
             $out .= '<span class="cp-count">' . count($p['panels']) . ' '
                 . (count($p['panels']) === 1 ? 'panel' : 'panels') . '</span>';
