@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use Scriptwriter\ComicExporter;
 use Scriptwriter\ComicParser;
+use Scriptwriter\ComicRenderer;
 
 $number = fn (string $src): string => (new ComicExporter())->numbered($src);
 $parse = fn (string $src): array => (new ComicParser())->parse($src);
@@ -21,7 +22,7 @@ check(str_contains($out, "NOI:\tGo!"), 'beats pass through untouched');
 check(str_contains($number("#\n\n## x\n"), "# PAGE 1\n"), 'bare page numbered without a dash');
 
 // [SPREAD] rides at the end of the slug, so prefixing must not disturb it.
-check(str_contains($number("# EXT. CANAL - NIGHT [SPREAD]\n\n## x\n"), '# PAGE 1 - EXT. CANAL - NIGHT [SPREAD]'), '[SPREAD] stays put');
+check(str_contains($number("# EXT. CANAL - NIGHT [SPREAD]\n\n## x\n"), '# PAGES 1–2 - EXT. CANAL - NIGHT [SPREAD]'), '[SPREAD] stays put');
 
 // --- Never renumbering the writer --------------------------------------------
 $own = "# PAGE THREE: THE CHASE\n\n## **PANEL 2A:** an insert.\n\n## And then.\n";
@@ -68,3 +69,31 @@ check($strip($parse($src)) === $strip($parse($once)), 'structure survives the ro
 
 // CRLF in, CRLF out.
 check(str_contains($number("# A\r\n\r\n## x\r\n"), "\r\n"), 'CRLF line endings preserved');
+
+// --- Spreads -------------------------------------------------------------------
+// A spread is two printed pages, counted by the same rule as Preview, so the
+// page after one starting on 16 is 18 — on a left page and on a right one.
+$out = $number("# PAGE 16 - A\n\n## x\n\n# B [SPREAD]\n\n## y\n\n# C\n\n## z\n");
+check(str_contains($out, '# PAGES 17–18 - B [SPREAD]'), 'a spread on a right page takes two numbers');
+check(str_contains($out, '# PAGE 19 - C'), 'and the page after it counts on from the second');
+$out = $number("# A [SPREAD]\n\n## x\n\n# B\n\n## y\n");
+check(str_contains($out, '# PAGES 1–2 - A [SPREAD]') && str_contains($out, '# PAGE 3 - B'), 'a spread from page 1 counts the same way');
+
+// The export reads its own spread headings back: "PAGES 16–17" starts at 16,
+// and a writer-labelled spread still counts as two.
+$out = $number("# PAGES 16-17 - A [SPREAD]\n\n## x\n\n# B\n\n## y\n");
+check(str_contains($out, '# PAGES 16-17 - A [SPREAD]') && str_contains($out, '# PAGE 18 - B'), 'a labelled spread is adopted and counts as two');
+$once = $number("# PAGE 15 - A\n\n## x\n\n# B [SPREAD]\n\n## y\n\n# C\n\n## z\n");
+check($number($once) === $once, 'numbering a spread twice changes nothing');
+
+// The export and Preview agree, and keep agreeing after the export is
+// rendered in turn: same data-page, data-page-end and data-side on every sheet.
+$sheets = function (string $src): array {
+    $html = (new ComicRenderer())->toHtml((new ComicParser())->parse($src));
+    preg_match_all('/<section class="comic-page sheet"([^>]*)>/', $html, $m);
+    return $m[1];
+};
+foreach (["# PAGE 22 - A\n\n## x\n\n# B [SPREAD]\n\n## y\n\n# C\n\n## z\n",
+          "# A\n\n## x\n\n# B [SPREAD]\n\n## y\n\n# C [SPREAD]\n\n## z\n\n# D\n\n## w\n"] as $i => $src) {
+    check($sheets($src) === $sheets($number($src)), 'numbers survive export and re-render, case ' . ($i + 1));
+}

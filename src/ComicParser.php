@@ -93,7 +93,7 @@ final class ComicParser
                 $pendingBlank = false;
                 $flushPage();
                 $slug = trim($m[1] ?? '');
-                $spread = (bool) preg_match('/\[SPREAD\]\s*$/i', $slug);
+                $spread = Support::isSpread($slug);
                 if ($spread) {
                     $slug = trim((string) preg_replace('/\[SPREAD\]\s*$/i', '', $slug));
                 }

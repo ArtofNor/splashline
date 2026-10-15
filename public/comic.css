@@ -72,7 +72,7 @@
   text-underline-offset: 0.2em;
   white-space: nowrap;
 }
-:where(.comic) .cp-badge {
+:where(.comic) .cp-badge, :where(.comic) .cp-side {
   font-size: 0.7rem;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-weight: 600;
@@ -83,6 +83,8 @@
   padding: 0.1rem 0.45rem;
   align-self: center;
 }
+/* Which side of the book the page lands on: a badge, but quiet. */
+:where(.comic) .cp-side { color: var(--comic-muted); background: none; border: 1px solid currentColor; }
 :where(.comic) .cp-count { margin-left: auto; color: var(--comic-muted); font-size: 0.85em; white-space: nowrap; }
 :where(.comic) .cp-warn {
   font-size: 0.7rem;

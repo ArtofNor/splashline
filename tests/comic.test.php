@@ -127,3 +127,44 @@ $html = $render("# PAGE 22 - EXT. ROOF - NIGHT\n\n## A panel.\n\n# EXT. STREET -
 preg_match_all('/data-page="(\d+)"/', $html, $m);
 check($m[1] === ['22', '23'], "data-page follows the writer's anchor");
 check(str_contains($html, '<span class="cp-no">PAGE 23</span>'), 'and agrees with the printed heading');
+
+// --- Page sides and spreads ----------------------------------------------------
+// Page 1 is a right-hand page, so odd is right and even is left — following
+// the writer's anchor, so an excerpt starting at PAGE 22 starts on the left.
+$sides = function (string $html): array {
+    preg_match_all('/data-side="(\w+)"/', $html, $m);
+    return $m[1];
+};
+$html = $render("#{$PANEL}#{$PANEL}#{$PANEL}");
+check($sides($html) === ['right', 'left', 'right'], 'a plain script starts on a right page and alternates');
+check(str_contains($html, 'cp-no">PAGE 1</span><span class="cp-side">RIGHT</span>'), 'the side shows beside the page number');
+$html = $render("# PAGE 22{$PANEL}#{$PANEL}");
+check($sides($html) === ['left', 'right'], 'an excerpt anchored at an even page starts on the left');
+check(str_contains($html, 'cp-side">LEFT</span>'), 'and says so on a writer-labelled page too');
+
+// A spread on a left page: two numbers, no flag, and the next page is 18.
+$html = $render("# PAGE 15{$PANEL}# EXT. ROOF [SPREAD]{$PANEL}#{$PANEL}");
+check(str_contains($html, 'data-page="16" data-page-end="17" data-side="left"'), 'a spread carries both of its numbers');
+check(str_contains($html, 'cp-no">PAGES 16–17</span>'), 'and its header reads PAGES 16–17');
+check(str_contains($html, 'data-page="18" data-side="left"') && str_contains($html, 'cp-no">PAGE 18</span>'), 'the page after a spread is 18');
+check(!str_contains($html, 'Spread starts on a right page'), 'a spread on a left page is not flagged');
+check(substr_count($html, 'data-page-end') === 1, 'only the spread carries an end page');
+
+// A spread on a right page: flagged, and still counted as two.
+$html = $render("# EXT. ROOF [SPREAD]{$PANEL}#{$PANEL}");
+check(str_contains($html, 'data-page="1" data-page-end="2" data-side="right"'), 'a spread from page 1 starts on the right');
+check(substr_count($html, 'Spread starts on a right page') === 1, 'a spread on a right page is flagged once');
+check(str_contains($html, 'cp-no">PAGE 3</span>'), 'and the page after it is still 3');
+
+// The out-of-sequence check expects two pages on after a spread.
+$html = $render("# PAGE 16 [SPREAD]{$PANEL}# PAGE 18{$PANEL}");
+check(!str_contains($html, 'expected PAGE'), 'a label two on from a spread is in sequence');
+$html = $render("# PAGE 16 [SPREAD]{$PANEL}# PAGE 17{$PANEL}");
+check(str_contains($html, 'expected PAGE 18'), 'a label one on from a spread is flagged');
+
+// Stats count printed pages: a spread adds two.
+$html = $render("# A [SPREAD]{$PANEL}#{$PANEL}");
+check(str_contains($html, 'comic-stats">3 pages · 2 panels'), 'stats count a spread as two pages');
+
+check(Support::isSpread('EXT. ROOF [spread] ') && !Support::isSpread('EXT. [SPREAD] ROOF'), '[SPREAD] only counts at the end of the slug');
+check(Support::pageLabelNumber('PAGES 16–17 - EXT. ROOF') === 16, 'an en-dash page range reads as its first page');

@@ -99,7 +99,12 @@
       else if (mk === '##') { out[i] = labels[i] ? 'c-panel c-panel-own' : 'c-panel'; inPanel = true; }
       // A slug the writer numbered themselves ("PAGE TWO: ...") suppresses our
       // counter, the same call ComicRenderer makes before printing "PAGE n".
-      else if (mk === '#') { out[i] = /^PAGE\b/i.test(t) ? 'c-page c-page-own' : 'c-page'; inPanel = false; }
+      // A spread takes two page numbers (Support::pageSpan); c-spread lets the
+      // stylesheet count it twice.
+      else if (mk === '#') {
+        out[i] = (/^PAGE\b/i.test(t) ? 'c-page c-page-own' : 'c-page') + (/\[SPREAD\]\s*$/i.test(t) ? ' c-spread' : '');
+        inPanel = false;
+      }
       else if (/^\[.*\]$/.test(t)) out[i] = 'c-note';
       else if (inPanel && isCue(t)) { kind = beatType(t); out[i] = 'c-beat' + kind; }
       // A plain line after a beat continues that speech (multiline dialogue),

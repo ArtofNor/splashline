@@ -4,10 +4,6 @@ Ideas parked for later, roughly in the order they'd pay off.
 
 ## Comic writers
 
-- **Page-turn markers** — LEFT/RIGHT (verso/recto) indicator in each page
-  header so reveals can be planned on the turn. Odd = right-hand page. Must
-  respect the anchored page numbering (an excerpt starting at PAGE 22 knows
-  22 is a left page).
 - **House-rule lints** (advisory chips, same style as existing ones):
   em dashes anywhere (hard Sahtu rule), sequence words in panel descriptions
   ("then", "after", "starts to" = one-action-per-panel tell), density

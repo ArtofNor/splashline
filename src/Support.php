@@ -83,10 +83,33 @@ final class Support
         return $dir . '/' . $base;
     }
 
+    /** A page line ending in [SPREAD] is a two-page spread. */
+    public static function isSpread(string $slug): bool
+    {
+        return (bool) preg_match('/\[SPREAD\]\s*$/i', $slug);
+    }
+
     /**
-     * The number in a writer-supplied page label: "PAGE 5", "PAGES 12-13"
-     * (first of the range), or spelled out up to ninety-nine ("PAGE TWO",
-     * "PAGE TWENTY-ONE"). Null when the label carries no readable number.
+     * How many printed pages a page takes: a spread is two, so the page after
+     * a spread starting on 16 is 18. The renderer and the numbered export both
+     * count through here, so the preview and the downloaded file can't drift.
+     */
+    public static function pageSpan(bool $spread): int
+    {
+        return $spread ? 2 : 1;
+    }
+
+    /** Printed pages are numbered from a right-hand page 1: odd right, even left. */
+    public static function pageSide(int $page): string
+    {
+        return $page % 2 === 1 ? 'right' : 'left';
+    }
+
+    /**
+     * The number in a writer-supplied page label: "PAGE 5", "PAGES 12-13" or
+     * "PAGES 16–17" (first of the range), or spelled out up to ninety-nine
+     * ("PAGE TWO", "PAGE TWENTY-ONE"). Null when the label carries no
+     * readable number.
      */
     public static function pageLabelNumber(string $slug): ?int
     {

@@ -65,14 +65,18 @@ final class ComicExporter
                 $started = true;
                 $panel = 0;
 
+                // A spread takes two numbers, by the same rule the renderer
+                // counts with, and keeps its [SPREAD] at the end of the slug.
+                $span = Support::pageSpan(Support::isSpread($slug));
                 $own = Support::pageLabelNumber($slug);
                 if ($own !== null) {
                     $page = $own;
                     $out[] = $line;
                 } else {
-                    $out[] = rtrim('# PAGE ' . $page . ($slug === '' ? '' : ' - ' . $slug));
+                    $no = $span > 1 ? 'PAGES ' . $page . '–' . ($page + $span - 1) : 'PAGE ' . $page;
+                    $out[] = rtrim('# ' . $no . ($slug === '' ? '' : ' - ' . $slug));
                 }
-                $page++;
+                $page += $span;
                 continue;
             }
 
