@@ -191,3 +191,8 @@ check(str_contains($html, 'Splash spread on a single page'), 'a splash spread on
 check(!str_contains($html, 'Splash on a page'), 'and is not mistaken for a plain splash');
 $html = $render("# A [SPREAD]\n\n## SPLASH SPREAD. The canal.\n");
 check(!str_contains($html, 'Splash spread on a single page'), 'a splash spread on a spread is not flagged');
+
+// The sample is what a new writer opens first, so it should model the format
+// without tripping a single advisory chip.
+$html = $render((string) file_get_contents(__DIR__ . '/../scripts/comic-sample.md'));
+check(!str_contains($html, 'cp-warn'), 'comic-sample.md trips no advisory chips');

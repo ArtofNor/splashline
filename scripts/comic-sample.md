@@ -4,6 +4,8 @@
 
 CAPTION:	Three minutes before the lanterns go out.
 
+# EXT. NIGHT MARKET - CONTINUOUS
+
 ## Behind her, two GUARDS shove past a fruit stall. Oranges scatter.
 
 SFX:	KRAK
