@@ -96,10 +96,15 @@ NOI (OFF):	Sorry! Borrowing your floor!
   SPREAD, WIDE, TALL, THIN, INSET, SILENT, REPEAT, MONTAGE, BORDERLESS,
   BLEED, BROKEN BORDER, FLASHBACK, and friends. `ACROSS.` marks a panel
   that runs over the fold of a spread; the panel carries `data-across` so a
-  page-turn view can draw it across both halves.
+  page-turn view can draw it across both halves. Consecutive `TIER.`
+  panels share a row, side by side, and the next panel without it starts a
+  new full-width row; each panel in a row carries the same `data-tier`
+  number, counted per page, and no count is ever written into the script.
   - Layout chips: an ACROSS panel on a page that isn't `[SPREAD]`, a
     `SPLASH.` sharing its page with other panels (an `INSET` on it is fine),
-    and a `SPLASH SPREAD.` on a page that isn't `[SPREAD]`.
+    a `SPLASH SPREAD.` on a page that isn't `[SPREAD]`, and a panel with
+    more than 4 balloons (every numbered beat counts, captions and SFX
+    included).
 - A caps cue followed by a colon is a beat: dialogue, `SFX:`, or
   `CAPTION:`. No marker needed, since dialogue is the line you type most.
   Balloons are numbered per page for lettering. Balloon-style extensions

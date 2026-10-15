@@ -13,6 +13,7 @@ namespace Scriptwriter;
 final class ComicRenderer
 {
     private const LONG_BALLOON_WORDS = 25;
+    private const MAX_PANEL_BALLOONS = 4;
 
     /**
      * Panel-type keywords recognised at the start of a panel description
@@ -23,7 +24,7 @@ final class ComicRenderer
         'SPLASH SPREAD', 'BROKEN BORDER', 'REPEAT PANEL', '9-PANEL GRID',
         'LARGE PANEL', 'BIG PANEL', 'TALL PANEL', 'THIN PANEL', 'FULL BLEED',
         'WIDESCREEN', 'BORDERLESS', 'LETTERBOX', 'FLASHBACK', 'MONTAGE',
-        'SLIVER', 'SILENT', 'SPLASH', 'ACROSS', 'REPEAT', 'INSET', 'BLEED', 'STAT',
+        'SLIVER', 'SILENT', 'SPLASH', 'ACROSS', 'TIER', 'REPEAT', 'INSET', 'BLEED', 'STAT',
         'WIDE', 'TALL', 'THIN',
     ];
 
@@ -123,12 +124,22 @@ final class ComicRenderer
             // Each panel's type keywords, read up front: whether a splash
             // shares its page depends on what the other panels are. An INSET
             // sits on a splash rather than beside it, so it doesn't count.
+            // Consecutive TIER. panels share a row; the count is per page and
+            // goes on the sheet, never into the script, where it would go stale.
             $kinds = [];
+            $tiers = [];
             $beside = 0;
+            $tier = 0;
             foreach ($p['panels'] as $j => $panel) {
                 [$types] = $this->panelTypes($panel['desc']);
                 $kinds[$j] = array_map(fn (string $b): string => explode(' (', $b, 2)[0], $types);
                 $beside += in_array('INSET', $kinds[$j], true) ? 0 : 1;
+                if (in_array('TIER', $kinds[$j], true)) {
+                    $tier += ($tiers[$j - 1] ?? null) === null ? 1 : 0;
+                    $tiers[$j] = $tier;
+                } else {
+                    $tiers[$j] = null;
+                }
             }
 
             foreach ($p['panels'] as $j => $panel) {
@@ -164,13 +175,21 @@ final class ComicRenderer
                     $layoutWarn .= $this->panelWarn('A splash is the whole page; only an INSET sits on it',
                         'Splash on a page with other panels');
                 }
+                // Every beat is a numbered balloon to the letterer, so the chip
+                // counts the same beats the numbers do.
+                if (count($panel['beats']) > self::MAX_PANEL_BALLOONS) {
+                    $layoutWarn .= $this->panelWarn('Crowded panels cost the artist and letterer room',
+                        'More than ' . self::MAX_PANEL_BALLOONS . ' balloons in a panel');
+                }
                 if (in_array('SPLASH SPREAD', $kind, true) && !$p['spread']) {
                     $layoutWarn .= $this->panelWarn('Mark the page [SPREAD] if this splash runs across two pages',
                         'Splash spread on a single page');
                 }
                 // A panel that crosses the fold is marked on the sheet, so a
-                // page-turn view can draw it across both halves of the spread.
-                $out .= '<div class="panel"' . ($across ? ' data-across' : '') . ">\n";
+                // page-turn view can draw it across both halves of the spread,
+                // and so is its tier, so panels can be laid out side by side.
+                $out .= '<div class="panel"' . ($across ? ' data-across' : '')
+                    . ($tiers[$j] !== null ? ' data-tier="' . $tiers[$j] . '"' : '') . ">\n";
                 $out .= '<p class="panel-desc"><strong class="panel-label">' . $this->inline($label)
                     . ':</strong>' . $panelWarn . $badges . $layoutWarn . ' ' . $this->inline(array_shift($descParas) ?? '') . "</p>\n";
                 foreach ($descParas as $para) {
