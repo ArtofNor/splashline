@@ -94,7 +94,12 @@ NOI (OFF):	Sorry! Borrowing your floor!
   checked against position (insert labels like `PANEL 2A` pass untouched).
   A caps keyword at the start of the description becomes a badge: SPLASH,
   SPREAD, WIDE, TALL, THIN, INSET, SILENT, REPEAT, MONTAGE, BORDERLESS,
-  BLEED, BROKEN BORDER, FLASHBACK, and friends.
+  BLEED, BROKEN BORDER, FLASHBACK, and friends. `ACROSS.` marks a panel
+  that runs over the fold of a spread; the panel carries `data-across` so a
+  page-turn view can draw it across both halves.
+  - Layout chips: an ACROSS panel on a page that isn't `[SPREAD]`, a
+    `SPLASH.` sharing its page with other panels (an `INSET` on it is fine),
+    and a `SPLASH SPREAD.` on a page that isn't `[SPREAD]`.
 - A caps cue followed by a colon is a beat: dialogue, `SFX:`, or
   `CAPTION:`. No marker needed, since dialogue is the line you type most.
   Balloons are numbered per page for lettering. Balloon-style extensions
