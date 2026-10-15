@@ -221,3 +221,41 @@ $html = $render($four . "\nSFX:\tKRAK\n\nSFX:\tWHMP\n");
 check(!str_contains($html, 'More than 4 balloons') && str_contains($html, 'beat-no">6.'), 'SFX are numbered but not counted toward the limit');
 $html = $render($four . "\nNOI:\tBye.\n");
 check(substr_count($html, 'More than 4 balloons in a panel') === 1, 'five dialogue and caption balloons get a chip');
+
+// --- Numbered tiers ------------------------------------------------------------
+// "TIER n." lets two rows sit back to back: a 2x2 page is TIER 1 twice, then
+// TIER 2 twice. data-tier counts rows in order, never the writer's n.
+$rows = function (array $tiers): array {
+    $out = [];
+    $prev = null;
+    foreach ($tiers as $t) {
+        if ($t !== null && $t === $prev) {
+            $out[count($out) - 1]++;
+        } else {
+            $out[] = 1;
+        }
+        $prev = $t;
+    }
+    return $out;
+};
+$html = $render("# A\n\n## TIER 1. Noi looks left.\n\n## TIER 1. The guard looks right.\n\n## TIER 2. The cook drops the pot.\n\n## TIER 2. Everyone turns.\n");
+check($tiersOf($html) === ['1', '1', '2', '2'], 'a 2x2 page gets two tiers');
+check($rows($tiersOf($html)) === [2, 2], 'which group into two rows of two');
+check(str_contains($html, 'p-badge">TIER 1</span>') && str_contains($html, 'p-badge">TIER 2</span>'), 'a numbered tier badge shows its number');
+check(str_contains($html, '</span> Noi looks left.'), 'the number is not left in the description');
+check(!str_contains($html, 'cp-warn'), 'a clean 2x2 trips no chips');
+
+$html = $render("# A\n\n## TIER. One.\n\n## TIER. Two.\n\n## TIER. Three.\n\n## TIER. Four.\n");
+check($tiersOf($html) === ['1', '1', '1', '1'] && str_contains($html, 'p-badge">TIER</span>'), 'a bare TIER. run is unchanged');
+check($tiersOf($render("# A\n\n## TIER. One.\n\n## TIER. Two.\n\n## TIER 1. Three.\n\n## TIER 1. Four.\n")) === ['1', '1', '2', '2'], 'a bare run then TIER 1 are two rows');
+
+$html = $render("# A\n\n## TIER 1. One.\n\n## TIER 2. Two.\n\n## TIER 1. Three.\n");
+check($tiersOf($html) === ['1', '2', '3'], 'TIER 1, TIER 2, TIER 1 are three rows');
+check(substr_count($html, 'Tier 1 is split by another tier') === 1
+    && strpos($html, 'Tier 1 is split') > strpos($html, 'Two.'), 'the returning tier is flagged once, on itself');
+check(!str_contains($render("# A\n\n## TIER 1. One.\n\n## Wide.\n\n## TIER 1. Two.\n"), 'is split'), 'a full-width panel between is not another tier');
+
+$html = $render("# A\n\n## TIER 1 INSET (top left). One.\n\n## TIER 1. WIDE. Two.\n");
+check(str_contains($html, 'p-badge">INSET (TOP LEFT)</span>') && str_contains($html, 'p-badge">WIDE</span>'), 'keywords after TIER n still parse');
+check($tiersOf($html) === ['1', '1'], 'and the tier still groups');
+check($tiersOf($render("# A\n\n## TIER 1. One.\n\n# B\n\n## TIER 1. Two.\n")) === ['1', '1'], 'tier numbers count within their page');
