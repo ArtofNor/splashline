@@ -196,3 +196,28 @@ check(!str_contains($html, 'Splash spread on a single page'), 'a splash spread o
 // without tripping a single advisory chip.
 $html = $render((string) file_get_contents(__DIR__ . '/../scripts/comic-sample.md'));
 check(!str_contains($html, 'cp-warn'), 'comic-sample.md trips no advisory chips');
+
+// --- Tiers and the balloon limit -----------------------------------------------
+// Consecutive TIER. panels share a row; the sheet numbers rows per page.
+$tiersOf = function (string $html): array {
+    preg_match_all('/<div class="panel"([^>]*)>/', $html, $m);
+    return array_map(fn (string $a): ?string => preg_match('/data-tier="(\d+)"/', $a, $t) ? $t[1] : null, $m[1]);
+};
+$html = $render("# A\n\n## TIER. Noi looks left.\n\n## TIER. The guard looks right.\n\n## TIER. The cook looks at both.\n\n## The stall collapses.\n");
+check($tiersOf($html) === ['1', '1', '1', null], 'three TIER. panels share a tier and the next bare panel has none');
+check(substr_count($html, 'p-badge">TIER</span>') === 3, 'TIER gets a badge');
+$html = $render("# A\n\n## TIER. One.\n\n## TIER. Two.\n\n## Wide.\n\n## TIER. Three.\n\n## TIER INSET. Four.\n");
+check($tiersOf($html) === ['1', '1', null, '2', '2'], 'two tiers on one page get different numbers, an INSET joins its tier');
+check($tiersOf($render("# A\n\n## TIER. Alone.\n\n# B\n\n## TIER. New page.\n")) === ['1', '1'], 'a lone TIER. is a tier of one, numbered per page');
+$html = $render("# A [SPREAD]\n\n## TIER. ACROSS. Left.\n\n## TIER. Right.\n");
+check($tiersOf($html) === ['1', '1'] && substr_count($html, 'data-across') === 1, 'ACROSS rides along without breaking the tier');
+check(!str_contains($render("# A\n\n## SPLASH. The market.\n\n## TIER. INSET. Her hand.\n"), 'Splash on a page'), 'a tiered INSET still sits on a splash');
+
+// The chip counts dialogue and captions; SFX keep their balloon numbers but
+// don't count toward the limit.
+$four = "# A\n\n## Crowded.\n\nNOI:\tHi.\n\nCAPTION:\tLater.\n\nBO:\tYo.\n\nCAPTION (NOI):\tThen.\n";
+check(!str_contains($render($four), 'More than 4 balloons'), 'four balloons in a panel are fine');
+$html = $render($four . "\nSFX:\tKRAK\n\nSFX:\tWHMP\n");
+check(!str_contains($html, 'More than 4 balloons') && str_contains($html, 'beat-no">6.'), 'SFX are numbered but not counted toward the limit');
+$html = $render($four . "\nNOI:\tBye.\n");
+check(substr_count($html, 'More than 4 balloons in a panel') === 1, 'five dialogue and caption balloons get a chip');
