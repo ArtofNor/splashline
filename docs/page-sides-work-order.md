@@ -1,7 +1,7 @@
 # Work Order: Page sides and two-page spreads
 
 **From:** Nor (drafted with Claude, 2026-10-15)
-**Status:** Not started. Propose a plan and get Nor's OK before building. Storyboon's page-turn preview waits on this.
+**Status:** Items 1–4 shipped in v1.9.0 and items 5–6 in v1.10.0. Items 7–8 are not started; Nor approved them on 2026-10-15. Storyboon's page-turn preview waits on them.
 
 ## The goal
 
@@ -27,6 +27,18 @@ Splashline owns page numbering, so it should own both rules. Any app built on it
 - A `SPLASH.` panel that shares its page with other panels: "Splash on a page with other panels." An `INSET` on a splash page is fine and should not trip it.
 - A `SPLASH SPREAD.` panel on a page that isn't marked `[SPREAD]`: "Splash spread on a single page."
 
+**7. Panels side by side: `TIER.`** A tier is the comics term for a row of panels. Consecutive panels that open with `TIER.` share one tier, side by side, and the next panel without it starts a new full-width row:
+
+```
+## TIER. Noi looks left.
+## TIER. The guard looks right.
+## TIER. The cook looks at both of them.
+```
+
+It is a keyword in the same style as the others (caps, ends in a period), and it gets a badge like them. No count is written ("1 of 3"), because a written count goes stale the moment a panel is inserted, which is why page and panel numbers are computed. The sheet records the grouping, so a surface like a page-turn view can lay panels out in their tiers without parsing descriptions: every panel in the same tier carries the same tier number on the page. A lone `TIER.` panel with no neighbour is simply a tier of one.
+
+**8. Too many balloons.** A crowded panel is a script problem an artist and letterer pay for. When a panel has more than 4 balloons, show an advisory chip in the existing style: "More than 4 balloons in a panel." Count what the engine already numbers as balloons, so the chip and the balloon numbers agree.
+
 ## Things to get right
 
 - **The numbered export has to agree.** `ComicExporter` writes page numbers into the downloaded file. It must use the same spread rule, or the downloaded script and the preview disagree. Same for any labels a writer spelled out: adopt them, as today.
@@ -41,6 +53,9 @@ Add cases to `tests/run.php`:
 - The numbered export matching the preview's numbers in both cases.
 - A crossing panel on a spread (no flag) and on a single page (flagged).
 - A splash alone, a splash with an inset (no flag), a splash with other panels (flagged), and a splash spread on a single page (flagged).
+- Tiers: three consecutive `TIER.` panels share one tier number and the next bare panel does not; two tiers on one page get different numbers; a lone `TIER.` panel is a tier of one.
+- Balloons: a panel with 4 balloons (no chip) and one with 5 (chip).
+- The comic sample still trips no chips.
 
 ## Done means
 
