@@ -81,6 +81,15 @@ NOI (OFF):	Sorry! Borrowing your floor!
 - `#` is a page. Location slug optional: a bare `#` shows as PAGE N.
   Writer-numbered labels like `# PAGE 22` anchor the count, so excerpts
   work, and out-of-sequence labels get flagged, never silently corrected.
+  End the slug with `[SPREAD]` for a two-page spread: it takes two page
+  numbers (PAGES 16–17), so the next page is 18. Every page header says
+  LEFT or RIGHT (page 1 is a right-hand page, and the side follows the
+  anchored count), and a spread that starts on a right page is flagged,
+  since it would split across the page turn. Each sheet carries
+  `data-page`, `data-side` and, for a spread, `data-page-end`, so an app
+  built on Splashline reads the numbers instead of counting sheets.
+  - Pages after a spread are renumbered from this release: a spread used to
+    count as one page, so everything after it read one too low.
 - `##` is a panel. Auto-numbered; explicit `**PANEL N:**` labels are
   checked against position (insert labels like `PANEL 2A` pass untouched).
   A caps keyword at the start of the description becomes a badge: SPLASH,

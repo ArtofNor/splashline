@@ -1,7 +1,7 @@
 # Work Order: Page sides and two-page spreads
 
 **From:** Nor (drafted with Claude, 2026-10-15)
-**Status:** Not started. Propose a plan and get Nor's OK before building. Storyboon's page-turn preview waits on this.
+**Status:** Built on feat/page-sides; not yet tagged.
 
 ## The goal
 
