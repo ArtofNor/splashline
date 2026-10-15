@@ -103,8 +103,8 @@ NOI (OFF):	Sorry! Borrowing your floor!
   - Layout chips: an ACROSS panel on a page that isn't `[SPREAD]`, a
     `SPLASH.` sharing its page with other panels (an `INSET` on it is fine),
     a `SPLASH SPREAD.` on a page that isn't `[SPREAD]`, and a panel with
-    more than 4 balloons (every numbered beat counts, captions and SFX
-    included).
+    more than 4 balloons (dialogue and captions count; SFX keep their
+    balloon numbers but don't count).
 - A caps cue followed by a colon is a beat: dialogue, `SFX:`, or
   `CAPTION:`. No marker needed, since dialogue is the line you type most.
   Balloons are numbered per page for lettering. Balloon-style extensions

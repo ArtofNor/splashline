@@ -175,9 +175,12 @@ final class ComicRenderer
                     $layoutWarn .= $this->panelWarn('A splash is the whole page; only an INSET sits on it',
                         'Splash on a page with other panels');
                 }
-                // Every beat is a numbered balloon to the letterer, so the chip
-                // counts the same beats the numbers do.
-                if (count($panel['beats']) > self::MAX_PANEL_BALLOONS) {
+                // The chip counts dialogue and captions only. SFX are lettered
+                // into the art rather than ballooned, so they don't crowd the
+                // panel the same way, even though they still take a balloon
+                // number. "SFX" is the parser's call, as for long balloons.
+                $balloons = count(array_filter($panel['beats'], fn (array $b): bool => $b['type'] !== 'sfx'));
+                if ($balloons > self::MAX_PANEL_BALLOONS) {
                     $layoutWarn .= $this->panelWarn('Crowded panels cost the artist and letterer room',
                         'More than ' . self::MAX_PANEL_BALLOONS . ' balloons in a panel');
                 }

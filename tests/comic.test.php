@@ -213,8 +213,11 @@ $html = $render("# A [SPREAD]\n\n## TIER. ACROSS. Left.\n\n## TIER. Right.\n");
 check($tiersOf($html) === ['1', '1'] && substr_count($html, 'data-across') === 1, 'ACROSS rides along without breaking the tier');
 check(!str_contains($render("# A\n\n## SPLASH. The market.\n\n## TIER. INSET. Her hand.\n"), 'Splash on a page'), 'a tiered INSET still sits on a splash');
 
-// The chip counts what the letterer numbers: every beat, captions and SFX too.
-$four = "# A\n\n## Crowded.\n\nNOI:\tHi.\n\nCAPTION:\tLater.\n\nSFX:\tKRAK\n\nBO:\tYo.\n";
+// The chip counts dialogue and captions; SFX keep their balloon numbers but
+// don't count toward the limit.
+$four = "# A\n\n## Crowded.\n\nNOI:\tHi.\n\nCAPTION:\tLater.\n\nBO:\tYo.\n\nCAPTION (NOI):\tThen.\n";
 check(!str_contains($render($four), 'More than 4 balloons'), 'four balloons in a panel are fine');
+$html = $render($four . "\nSFX:\tKRAK\n\nSFX:\tWHMP\n");
+check(!str_contains($html, 'More than 4 balloons') && str_contains($html, 'beat-no">6.'), 'SFX are numbered but not counted toward the limit');
 $html = $render($four . "\nNOI:\tBye.\n");
-check(substr_count($html, 'More than 4 balloons in a panel') === 1 && str_contains($html, 'beat-no">5.'), 'five get a chip, matching the balloon numbers');
+check(substr_count($html, 'More than 4 balloons in a panel') === 1, 'five dialogue and caption balloons get a chip');
