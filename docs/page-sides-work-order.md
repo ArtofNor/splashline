@@ -1,7 +1,7 @@
 # Work Order: Page sides and two-page spreads
 
 **From:** Nor (drafted with Claude, 2026-10-15)
-**Status:** Built on feat/page-sides; not yet tagged.
+**Status:** Not started. Propose a plan and get Nor's OK before building. Storyboon's page-turn preview waits on this.
 
 ## The goal
 
@@ -19,6 +19,14 @@ Splashline owns page numbering, so it should own both rules. Any app built on it
 
 **4. Stats.** The page count in the stats line counts printed pages, so each spread adds two.
 
+**5. A panel that crosses the middle of a spread.** On a spread, an artist often runs one panel across both pages, over the fold, with smaller panels around it. Today there is no way to mark that. Add a panel keyword for it, in the same style as the others (caps, ends in a period). Suggested: `ACROSS.`, as in `## ACROSS. The car on the highway, city behind, country ahead.` Bring Nor the name before building. Rules:
+- It only makes sense on a `[SPREAD]` page. Used on a single page, flag it: "This panel crosses the fold, but the page isn't a spread."
+- It gets a badge like the other panel types, and the sheet records which panels cross, so a page-turn view can draw them across both halves.
+
+**6. Splash checks.** Two advisory chips:
+- A `SPLASH.` panel that shares its page with other panels: "Splash on a page with other panels." An `INSET` on a splash page is fine and should not trip it.
+- A `SPLASH SPREAD.` panel on a page that isn't marked `[SPREAD]`: "Splash spread on a single page."
+
 ## Things to get right
 
 - **The numbered export has to agree.** `ComicExporter` writes page numbers into the downloaded file. It must use the same spread rule, or the downloaded script and the preview disagree. Same for any labels a writer spelled out: adopt them, as today.
@@ -31,6 +39,8 @@ Add cases to `tests/run.php`:
 - Sides for a plain script, and for an excerpt anchored at an even page.
 - A spread on a left page (no flag), a spread on a right page (flagged), and the numbering after each.
 - The numbered export matching the preview's numbers in both cases.
+- A crossing panel on a spread (no flag) and on a single page (flagged).
+- A splash alone, a splash with an inset (no flag), a splash with other panels (flagged), and a splash spread on a single page (flagged).
 
 ## Done means
 
