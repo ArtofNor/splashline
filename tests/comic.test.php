@@ -168,3 +168,26 @@ check(str_contains($html, 'comic-stats">3 pages · 2 panels'), 'stats count a sp
 
 check(Support::isSpread('EXT. ROOF [spread] ') && !Support::isSpread('EXT. [SPREAD] ROOF'), '[SPREAD] only counts at the end of the slug');
 check(Support::pageLabelNumber('PAGES 16–17 - EXT. ROOF') === 16, 'an en-dash page range reads as its first page');
+
+// --- Crossing panels and splash checks -----------------------------------------
+// ACROSS. runs a panel over the fold, so it belongs on a spread. The panel is
+// marked for a page-turn view to draw across both halves.
+$html = $render("# EXT. HIGHWAY [SPREAD]\n\n## ACROSS. The car on the highway.\n\n## INSET. The driver.\n");
+check(str_contains($html, 'p-badge">ACROSS</span>'), 'ACROSS gets a badge');
+check(substr_count($html, 'data-across') === 1 && str_contains($html, '<div class="panel" data-across>'), 'the crossing panel is marked on the sheet');
+check(!str_contains($html, 'crosses the fold'), 'a crossing panel on a spread is not flagged');
+$html = $render("# EXT. HIGHWAY\n\n## ACROSS. The car on the highway.\n");
+check(str_contains($html, "This panel crosses the fold, but the page isn&#039;t a spread"), 'a crossing panel on a single page is flagged');
+
+// A splash is the whole page; an INSET sits on it rather than beside it.
+$html = $render("# A\n\n## SPLASH. The market.\n");
+check(!str_contains($html, 'Splash on a page'), 'a splash alone is not flagged');
+$html = $render("# A\n\n## SPLASH. The market.\n\n## INSET (bottom right). Her hand.\n");
+check(!str_contains($html, 'Splash on a page'), 'a splash with an inset is not flagged');
+$html = $render("# A\n\n## SPLASH. The market.\n\n## The guards.\n");
+check(substr_count($html, 'Splash on a page with other panels') === 1, 'a splash with other panels is flagged once');
+$html = $render("# A\n\n## SPLASH SPREAD. The canal.\n");
+check(str_contains($html, 'Splash spread on a single page'), 'a splash spread on a single page is flagged');
+check(!str_contains($html, 'Splash on a page'), 'and is not mistaken for a plain splash');
+$html = $render("# A [SPREAD]\n\n## SPLASH SPREAD. The canal.\n");
+check(!str_contains($html, 'Splash spread on a single page'), 'a splash spread on a spread is not flagged');

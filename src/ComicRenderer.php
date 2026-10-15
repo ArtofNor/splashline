@@ -23,7 +23,7 @@ final class ComicRenderer
         'SPLASH SPREAD', 'BROKEN BORDER', 'REPEAT PANEL', '9-PANEL GRID',
         'LARGE PANEL', 'BIG PANEL', 'TALL PANEL', 'THIN PANEL', 'FULL BLEED',
         'WIDESCREEN', 'BORDERLESS', 'LETTERBOX', 'FLASHBACK', 'MONTAGE',
-        'SLIVER', 'SILENT', 'SPLASH', 'REPEAT', 'INSET', 'BLEED', 'STAT',
+        'SLIVER', 'SILENT', 'SPLASH', 'ACROSS', 'REPEAT', 'INSET', 'BLEED', 'STAT',
         'WIDE', 'TALL', 'THIN',
     ];
 
@@ -120,6 +120,17 @@ final class ComicRenderer
 
             $balloonNo = 0; // Letterers number per page, across panels.
 
+            // Each panel's type keywords, read up front: whether a splash
+            // shares its page depends on what the other panels are. An INSET
+            // sits on a splash rather than beside it, so it doesn't count.
+            $kinds = [];
+            $beside = 0;
+            foreach ($p['panels'] as $j => $panel) {
+                [$types] = $this->panelTypes($panel['desc']);
+                $kinds[$j] = array_map(fn (string $b): string => explode(' (', $b, 2)[0], $types);
+                $beside += in_array('INSET', $kinds[$j], true) ? 0 : 1;
+            }
+
             foreach ($p['panels'] as $j => $panel) {
                 $label = $panel['label'] ?? ('PANEL ' . ($j + 1));
                 // Explicit labels are checked against position: panels always
@@ -135,6 +146,8 @@ final class ComicRenderer
                     }
                 }
                 [$types, $desc] = $this->panelTypes($panel['desc']);
+                $kind = $kinds[$j];
+                $across = in_array('ACROSS', $kind, true);
                 $descParas = explode("\n\n", $desc);
                 $badges = '';
                 foreach ($types as $kw) {
@@ -142,9 +155,24 @@ final class ComicRenderer
                     $badges .= ' <span class="p-badge' . ($splashy ? ' splash' : '') . '">'
                         . $this->inline(strtoupper($kw)) . '</span>';
                 }
-                $out .= "<div class=\"panel\">\n";
+                $layoutWarn = '';
+                if ($across && !$p['spread']) {
+                    $layoutWarn .= $this->panelWarn('ACROSS runs over the fold, which only a spread has',
+                        "This panel crosses the fold, but the page isn't a spread");
+                }
+                if (in_array('SPLASH', $kind, true) && $beside > 1) {
+                    $layoutWarn .= $this->panelWarn('A splash is the whole page; only an INSET sits on it',
+                        'Splash on a page with other panels');
+                }
+                if (in_array('SPLASH SPREAD', $kind, true) && !$p['spread']) {
+                    $layoutWarn .= $this->panelWarn('Mark the page [SPREAD] if this splash runs across two pages',
+                        'Splash spread on a single page');
+                }
+                // A panel that crosses the fold is marked on the sheet, so a
+                // page-turn view can draw it across both halves of the spread.
+                $out .= '<div class="panel"' . ($across ? ' data-across' : '') . ">\n";
                 $out .= '<p class="panel-desc"><strong class="panel-label">' . $this->inline($label)
-                    . ':</strong>' . $panelWarn . $badges . ' ' . $this->inline(array_shift($descParas) ?? '') . "</p>\n";
+                    . ':</strong>' . $panelWarn . $badges . $layoutWarn . ' ' . $this->inline(array_shift($descParas) ?? '') . "</p>\n";
                 foreach ($descParas as $para) {
                     $out .= '<p class="panel-desc">' . $this->inline($para) . "</p>\n";
                 }
@@ -201,6 +229,13 @@ final class ComicRenderer
     private function panelNumber(string $label): ?int
     {
         return Support::panelLabelNumber($label);
+    }
+
+    /** An advisory chip inside a panel line, in the out-of-sequence style. */
+    private function panelWarn(string $title, string $text): string
+    {
+        return ' <span class="cp-warn" title="' . htmlspecialchars($title, ENT_QUOTES) . '">'
+            . htmlspecialchars($text, ENT_QUOTES) . '</span>';
     }
 
     /**
