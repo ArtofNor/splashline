@@ -229,22 +229,10 @@ main { padding: 2rem 1rem; }
 .editor-live .ln.c-page.c-page-own::before { content: none; }
 /* A spread is two printed pages, so its line counts cpage a second time on the
    way out: it still reads PAGE 16 and the next page reads 18, as in Preview.
+   The ::after is empty and exists only to carry the second step. The line
+   already shows the writer's own [SPREAD], so a badge here would say it twice.
    Sides aren't shown here — a counter can't tell odd from even. */
-.editor-live .ln.c-page.c-spread::after {
-  counter-increment: cpage;
-  content: "SPREAD";
-  margin-left: 0.8em;
-  font-size: 0.7rem;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-decoration: none;
-  display: inline-block;
-  color: var(--paper);
-  background: var(--accent);
-  border-radius: 4px;
-  padding: 0.1rem 0.45rem;
-}
+.editor-live .ln.c-page.c-spread::after { content: ""; counter-increment: cpage; }
 
 /* The label is bold, the description isn't — Preview bolds only its
    .panel-label and leaves the description at normal weight. */
