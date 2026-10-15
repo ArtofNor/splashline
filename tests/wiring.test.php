@@ -50,3 +50,9 @@ check($styleAt !== false && $comicAt !== false && $styleAt < $comicAt, 'comic.cs
 $comicCss = (string) file_get_contents(__DIR__ . '/../public/comic.css');
 check(!str_contains((string) file_get_contents(__DIR__ . '/../public/style.css'), '.beat-label {'), 'style.css no longer carries the comic rules');
 check(str_contains($comicCss, ':where(.comic) .beat-label'), 'comic.css carries them, scoped to .comic');
+
+// A spread counts twice in the editor too: editor.js tags the line, and
+// style.css bumps cpage a second time on it.
+$style = (string) file_get_contents(__DIR__ . '/../public/style.css');
+check(str_contains($editor, "' c-spread'"), 'editor tags a spread page line');
+check(preg_match('/\.c-spread::after\s*\{[^}]*counter-increment:\s*cpage/', $style) === 1, 'style.css counts a spread twice');

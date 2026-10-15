@@ -227,6 +227,24 @@ main { padding: 2rem 1rem; }
 /* The writer numbered the page themselves ("PAGE TWO: ..."), so printing ours
    next to theirs would read as two page numbers. Same call as ComicRenderer:77. */
 .editor-live .ln.c-page.c-page-own::before { content: none; }
+/* A spread is two printed pages, so its line counts cpage a second time on the
+   way out: it still reads PAGE 16 and the next page reads 18, as in Preview.
+   Sides aren't shown here — a counter can't tell odd from even. */
+.editor-live .ln.c-page.c-spread::after {
+  counter-increment: cpage;
+  content: "SPREAD";
+  margin-left: 0.8em;
+  font-size: 0.7rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  display: inline-block;
+  color: var(--paper);
+  background: var(--accent);
+  border-radius: 4px;
+  padding: 0.1rem 0.45rem;
+}
 
 /* The label is bold, the description isn't — Preview bolds only its
    .panel-label and leaves the description at normal weight. */
