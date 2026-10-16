@@ -266,6 +266,17 @@ main { padding: 2rem 1rem; }
   background: #f2f0e9;
   box-shadow: 0 0 0 1px #ddd8c8;
   border-radius: 2px;
+  padding: 0.2em 0.5em;
+  /* One box however many lines it wraps to, rather than a padded strip per
+     line that overlaps the next. It starts at the speech column, so it fits
+     the rest of the line; text-indent is reset because the line's hanging
+     indent would otherwise pull the box's own first line back 2.2in. */
+  display: inline-block;
+  max-width: 100%;
+  text-indent: 0;
+  /* Top, so the cue sits on the caption's first line, not its last. */
+  vertical-align: top;
+  margin-top: -0.2em;
 }
 .editor-live .ln.c-note { color: #8a7b52; font-style: italic; }
 
