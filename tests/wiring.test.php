@@ -56,3 +56,13 @@ check(str_contains($comicCss, ':where(.comic) .beat-label'), 'comic.css carries 
 $style = (string) file_get_contents(__DIR__ . '/../public/style.css');
 check(str_contains($editor, "' c-spread'"), 'editor tags a spread page line');
 check(preg_match('/\.c-spread::after\s*\{[^}]*counter-increment:\s*cpage/', $style) === 1, 'style.css counts a spread twice');
+
+// The editor keeps its own undo history, since it rewrites lines by hand and
+// the browser's stack can't follow. Structure only: the behaviour is checked
+// by hand in a browser.
+check(str_contains($editor, "'historyUndo'") && str_contains($editor, "'historyRedo'"), "the browser's own undo and redo are routed to the editor's");
+check(preg_match("/function rebuild\(text\)\s*\{\s*comicMode = false;[^}]*build\(text\);/", $editor) === 1, 'rebuild resets comic mode before building, so headings re-absorb');
+check(preg_match('/function markDirty\(\)\s*\{[^}]*settle\(\);/', $editor) === 1, 'every edit settles its undo step in markDirty');
+foreach (['enter', 'paste', 'tab', 'level', 'emphasis', 'marker', 'cue-tab'] as $kind) {
+    check(str_contains($editor, "'" . $kind . "'"), "the {$kind} edit records an undo step");
+}

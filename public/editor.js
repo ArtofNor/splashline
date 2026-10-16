@@ -735,21 +735,169 @@
     placeCaret(c.div, text.length + 1);
   }
 
+  // --- Undo ------------------------------------------------------------------
+
+  /**
+   * The editor's own history. The browser's contenteditable undo can't be
+   * used: every line is rewritten by hand as you type (setDivText, absorb,
+   * paint), and the native stack only knows about the edits it made itself, so
+   * Cmd+Z did nothing, or half of something, and lost the caret.
+   *
+   * A step is the state from just before an edit: the whole text as getText()
+   * reads it (so undo never brings back rendered text) and the caret as a line
+   * index plus an offset into that line's source. Every edit says it is coming
+   * with willEdit(kind) and is settled by markDirty(), which every edit already
+   * calls. An edit that changed nothing leaves no step.
+   *
+   * Typing and plain deleting run together into one step until a pause or a
+   * word ends; everything else (Enter, paste, cut, Tab, a level key, a marker
+   * absorbed, a cue's tab, emphasis) is a step of its own.
+   */
+  var undoStack = [];
+  var redoStack = [];
+  var UNDO_LIMIT = 200;
+  var UNDO_PAUSE = 1000; // ms. A longer pause starts a new step.
+  var pending = null;    // { snap, kind } for an edit under way.
+  var lastKind = null;   // The kind of the last step, while it may still grow.
+  var lastAt = 0;
+  var closed = false;    // The last step ended a word, so it can't grow.
+  var lastWord = false;  // The last character typed was part of a word.
+
+  /** A line's characters that sit in front of its source in getText(). */
+  function prefixLength(div) {
+    var mark = markOf(div);
+    var raw = div.getAttribute('data-raw') || '';
+    var body = raw + sourceOf(div);
+    return (mark ? mark.length + (body === '' ? 0 : 1) : 0) + raw.length;
+  }
+
+  function snapshot() {
+    var caret = { line: 0, offset: 0 };
+    var c = caretLine();
+    if (c) {
+      // The live line shows its source; any other shows the view, which hides
+      // asterisks, so the offset is mapped back the same way raw() does.
+      var at = c.div.getAttribute('data-src') === null ? c.offset : toSource(sourceOf(c.div), c.offset);
+      caret = { line: lineDivs().indexOf(c.div), offset: prefixLength(c.div) + at };
+    }
+    return { text: getText(), caret: caret };
+  }
+
+  function willEdit(kind, ends) {
+    pending = { snap: snapshot(), kind: kind, ends: !!ends };
+  }
+
+  function settle() {
+    if (!pending) return;
+    var p = pending;
+    pending = null;
+    if (getText() === p.snap.text) return;
+    var now = Date.now();
+    var joins = (p.kind === 'type' || p.kind === 'delete') && p.kind === lastKind
+      && now - lastAt < UNDO_PAUSE && !closed;
+    if (!joins) {
+      undoStack.push(p.snap);
+      if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+    }
+    redoStack.length = 0;
+    lastKind = p.kind;
+    lastAt = now;
+    closed = p.ends;
+  }
+
+  /** Run one programmatic rewrite as a step of its own. */
+  function step(kind, fn) {
+    willEdit(kind);
+    fn();
+    settle();
+  }
+
+  /**
+   * Rebuild the surface from text. Comic mode is reset first: syncComicMode()
+   * only absorbs the # markers on the way into comic mode, so a second build()
+   * with it already on would leave every heading as raw text.
+   */
+  function rebuild(text) {
+    comicMode = false;
+    editor.classList.remove('is-comic');
+    live = null;
+    build(text);
+  }
+
+  function restore(snap) {
+    rebuild(snap.text);
+    var divs = lineDivs();
+    var div = divs[Math.min(snap.caret.line, divs.length - 1)];
+    var at = Math.min(Math.max(0, snap.caret.offset - prefixLength(div)), sourceOf(div).length);
+    live = div; // Painted as source, so the offset lands on the right character.
+    repaint(div);
+    placeCaret(div, at);
+  }
+
+  /**
+   * Undo or redo one step. A step whose state looks the same as now is passed
+   * over — a typed "# " restores as an absorbed marker, since that is how the
+   * text reads back — so one key press always visibly changes something.
+   */
+  function travel(from, to) {
+    if (composing || from.length === 0) return;
+    pending = null;
+    var here = snapshot();
+    while (from.length > 0) {
+      restore(from.pop());
+      if (getText() !== here.text) { to.push(here); break; }
+    }
+    lastKind = null;
+    markDirty();
+  }
+
+  function undo() { travel(undoStack, redoStack); }
+  function redo() { travel(redoStack, undoStack); }
+
   // --- Events ----------------------------------------------------------------
 
   var composing = false;
   var dirty = false;
 
-  editor.addEventListener('compositionstart', function () { composing = true; });
+  editor.addEventListener('compositionstart', function () {
+    composing = true;
+    willEdit('type'); // The state before the composition, settled at its end.
+  });
   editor.addEventListener('compositionend', function () {
     composing = false;
     restyle();
     markDirty();
   });
 
+  // Edits the browser makes itself announce themselves here first. The
+  // browser's own undo and redo (Edit menu, shake to undo) are turned into
+  // ours, so its broken stack never runs.
+  editor.addEventListener('beforeinput', function (e) {
+    if (e.inputType === 'historyUndo' || e.inputType === 'historyRedo') {
+      e.preventDefault();
+      if (e.inputType === 'historyUndo') undo(); else redo();
+      return;
+    }
+    if (composing || e.isComposing) return;
+    var collapsed = window.getSelection().isCollapsed;
+    var kind = e.inputType;
+    var ends = false;
+    if (collapsed && kind === 'insertText') {
+      kind = 'type';
+      // A space or punctuation after a letter ends the word, and its step.
+      var word = /[\p{L}\p{M}\p{N}]/u.test(e.data || '');
+      ends = !word && lastWord;
+      lastWord = word;
+    } else if (collapsed && (kind === 'deleteContentBackward' || kind === 'deleteContentForward')) {
+      kind = 'delete';
+    }
+    willEdit(kind, ends);
+  });
+
   editor.addEventListener('input', function () {
     if (composing) return;
-    if (comicMode) { absorbTyped(); autoTab(); }
+    settle(); // The typing itself, before anything below rewrites it.
+    if (comicMode) { step('marker', absorbTyped); step('cue-tab', autoTab); }
     restyle();
     markDirty();
   });
@@ -763,7 +911,14 @@
       var key = e.key.toLowerCase();
       if (key === 'b' || key === 'i') {
         e.preventDefault();
+        willEdit('emphasis');
         if (toggleEmphasis(key === 'b' ? 2 : 1)) markDirty();
+        return;
+      }
+      // Cmd/Ctrl+Z undoes; Cmd/Ctrl+Shift+Z and Ctrl+Y redo.
+      if (key === 'z' || (key === 'y' && e.ctrlKey && !e.metaKey)) {
+        e.preventDefault();
+        if (key === 'z' && !e.shiftKey) undo(); else redo();
         return;
       }
     }
@@ -775,6 +930,7 @@
       var c = caretLine();
       if (c && c.offset === 0 && markOf(c.div) && window.getSelection().isCollapsed) {
         e.preventDefault();
+        willEdit('level');
         setMark(c.div, '');
         releaseLabel(c.div);
         restyle();
@@ -785,6 +941,7 @@
     }
 
     if (e.key === 'Enter' && !e.shiftKey && !composing) {
+      willEdit('enter');
       if (splitLineAtCaret()) {
         e.preventDefault();
         markDirty();
@@ -799,6 +956,7 @@
     if (e.key === 'Tab' && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey
         && !composing && comicMode) {
       e.preventDefault();
+      willEdit('tab');
       insertMultiline('\t');
       markDirty();
       return;
@@ -815,6 +973,7 @@
       // Unconditionally, before the no-op check: a second Alt+3 on a line
       // that is already a beat still has to swallow the key, or macOS types £.
       e.preventDefault();
+      willEdit('level');
       if (setComicLevel(COMIC_LEVELS[e.code])) {
         restyle();
         markDirty();
@@ -874,6 +1033,7 @@
   editor.addEventListener('paste', function (e) {
     e.preventDefault();
     var text = (e.clipboardData || window.clipboardData).getData('text');
+    willEdit('paste');
     // Comic scripts are left alone: their pages are numbered "#", which the
     // furniture rules would read as a printer's page number and delete.
     insertMultiline(comicMode ? text : Paste.fromPrinted(text));
@@ -889,7 +1049,9 @@
 
   var autosaveTimer = null;
 
+  // Every edit ends here, so this is also where its undo step is settled.
   function markDirty() {
+    settle();
     dirty = true;
     if (autosaveTimer) clearTimeout(autosaveTimer);
     if (filenameEl.value.trim()) {
