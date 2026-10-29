@@ -12,10 +12,11 @@
  *    — a comic's heading marks, a panel label, the asterisks around emphasis —
  *    the source is kept on the line and sourceOf() is what saving, parsing and
  *    editing all read. getText() reassembles the file from those.
- *  - The line the caret is in is never rendered: it holds exactly its source
- *    (see `live`). Typing therefore always lands in plain text, which is what
- *    keeps the caret and IME/Lao composition safe even though other lines are
- *    rebuilt as spans.
+ *  - The line the caret is in is never rendered: it holds exactly its source,
+ *    a comic's # and ## included (see `live`). Typing therefore always lands
+ *    in plain text, which is what keeps the caret and IME/Lao composition safe
+ *    even though other lines are rebuilt as spans, and it is how a writer
+ *    learns the marks: the line they are on shows what they would type.
  *  - Enter and paste are handled manually to keep the strict one-div-per-line
  *    structure that classification relies on.
  */
@@ -64,8 +65,8 @@
     return !!m && isUpper(m[1]);
   }
 
-  // Levels come from each line's absorbed marker rather than its text, since
-  // in a comic doc the #s live in data-mark and never on screen (see absorb()).
+  // Levels come from each line's absorbed marker, or from the text of the line
+  // being edited, which holds its marks as typed (see levelOf()).
   /**
    * Which of the three kinds of beat a cue opens — mirrors parseBeat() in
    * ComicParser, including the balloon extension on the tag, so "CAPTION
@@ -253,6 +254,15 @@
   // PAGE 1 and PANEL 1 (drawn by CSS counters) instead of punctuation. getText
   // puts the marks back, which keeps the saved file plain Markdown and keeps
   // ComicParser the single source of truth for what the format is.
+  //
+  // The line being edited is the exception. It holds its marks as text, the
+  // way **bold** shows its asterisks there, so the # and ## a writer sees are
+  // the ones they type and delete. release() puts them on the line when the
+  // caret arrives and absorb() takes them off again when it leaves.
+
+  // A heading mark as ComicParser reads one: one to three #s, then whitespace
+  // or the end of the line. "#hashtag" is text.
+  var MARK = /^[ \t]*(#{1,3})(?:[ \t]+|$)/;
 
   function markOf(div) {
     return div.getAttribute('data-mark') || '';
@@ -261,18 +271,6 @@
   function setMark(div, mark) {
     if (mark) div.setAttribute('data-mark', mark);
     else div.removeAttribute('data-mark');
-  }
-
-  // Put an absorbed label back into the text. A line that stops being a panel
-  // has no business hiding a panel label, and the words are the writer's — so
-  // they return to the page rather than being dropped.
-  function releaseLabel(div) {
-    var raw = div.getAttribute('data-raw');
-    if (!raw) return 0;
-    div.removeAttribute('data-raw');
-    div.removeAttribute('data-label');
-    setDivText(div, raw + div.textContent);
-    return raw.length;
   }
 
   // A panel label the writer spelled out ("## **PANEL 1:** ...") is chrome too,
@@ -293,11 +291,47 @@
   // Move a leading marker off the text and into data-mark. Returns how many
   // characters left the text, so callers can keep the caret on its character.
   function absorb(div) {
-    var m = /^[ \t]*(#{1,3})[ \t]*/.exec(div.textContent);
+    var src = sourceOf(div);
+    var m = markOf(div) ? null : MARK.exec(src);
     if (!m) return 0;
     setMark(div, m[1]);
-    setDivText(div, div.textContent.slice(m[0].length));
+    setDivText(div, src.slice(m[0].length));
+    div.psig = null;
     return m[0].length + (m[1] === '##' ? absorbLabel(div) : 0);
+  }
+
+  /**
+   * The other way: put a line's absorbed mark and label back into its text,
+   * for the line the caret has just arrived on. The mark always gets its
+   * space, even on an empty panel, so what the writer types next is the
+   * panel's description and not part of the mark. Returns how many characters
+   * now sit in front of the body, so the caret can stay on its character.
+   */
+  function release(div) {
+    var mark = markOf(div);
+    if (!mark) return 0;
+    var raw = div.getAttribute('data-raw') || '';
+    var body = sourceOf(div);
+    setMark(div, '');
+    div.removeAttribute('data-raw');
+    div.removeAttribute('data-label');
+    setDivText(div, mark + ' ' + raw + body);
+    div.psig = null;
+    return mark.length + 1 + raw.length;
+  }
+
+  /**
+   * A line's level, label and body for the classifier. An absorbed line says
+   * so in its attributes; the line being edited is read from its text, with
+   * the same rules absorb() and parsePanel() use.
+   */
+  function levelOf(div) {
+    var src = sourceOf(div);
+    var m = !markOf(div) && div === live && comicMode ? MARK.exec(src) : null;
+    if (!m) return { mark: markOf(div), label: div.getAttribute('data-label'), body: src };
+    var body = src.slice(m[0].length);
+    var l = m[1] === '##' ? /^\*\*(.+?)\*\*/.exec(body) : null;
+    return { mark: m[1], label: l ? l[1].trim().replace(/:$/, '') : null, body: body };
   }
 
   function getText() {
@@ -342,7 +376,8 @@
     if (!isComicDoc(getText())) return false;
     comicMode = true;
     editor.classList.add('is-comic');
-    lineDivs().forEach(absorb);
+    // Not the line being edited: it keeps its marks as text.
+    lineDivs().forEach(function (d) { if (d !== live) absorb(d); });
     return true;
   }
 
@@ -358,6 +393,12 @@
   function paint(div, cls, active) {
     var src = sourceOf(div);
     var hide = !active;
+    var heading = /^c-(page|panel)\b/.test(cls);
+
+    // The stylesheet's cue to show this line as typed: its marks instead of
+    // the PAGE and PANEL labels, and the tab after a cue.
+    if (active) div.setAttribute('data-live', '');
+    else div.removeAttribute('data-live');
 
     div.textContent = '';
     if (src === '') {
@@ -366,11 +407,24 @@
       // The cue keeps the tab, so the column still comes from tab-size.
       var tab = src.indexOf('\t');
       var cue = cls === 'c-beat' || cls.indexOf('c-beat ') === 0 ? tab + 1 : 0;
-      if (cue > 0) div.appendChild(span('cue', src.slice(0, cue)));
+      if (cue > 0) {
+        // On the live line the tab is a span of its own, so it can be shown.
+        var cueEl = span('cue', src.slice(0, active ? tab : cue));
+        if (active) cueEl.appendChild(span('tab', '\t'));
+        div.appendChild(cueEl);
+      }
       var say = document.createElement('span');
       say.className = 'say';
       rich(say, src.slice(cue), hide);
       div.appendChild(say);
+    } else if (active && heading && MARK.test(src)) {
+      // The marks as typed, in a span of their own so they can be dimmed. The
+      // space after them stays outside it, so text typed there isn't dimmed.
+      var at = src.indexOf('#');
+      var n = MARK.exec(src)[1].length;
+      if (at > 0) div.appendChild(document.createTextNode(src.slice(0, at)));
+      div.appendChild(span('mk', src.slice(at, at + n)));
+      rich(div, src.slice(at + n), false);
     } else {
       rich(div, src, hide);
     }
@@ -411,9 +465,11 @@
     var comic = syncComicMode();
     var divs = lineDivs();
     var texts = divs.map(sourceOf);
+    var levels = comic ? divs.map(levelOf) : null;
     var cls = comic
-      ? classifyAllComic(texts, divs.map(markOf),
-          divs.map(function (d) { return d.getAttribute('data-label'); }))
+      ? classifyAllComic(levels.map(function (l) { return l.body; }),
+          levels.map(function (l) { return l.mark; }),
+          levels.map(function (l) { return l.label; }))
       : classifyAll(texts);
     // Repainting replaces a line's child nodes, so the caret is saved and put
     // back — but only when something actually needs repainting, which keeps
@@ -549,22 +605,29 @@
 
   // --- Structural edits ------------------------------------------------------
 
-  // The three levels the Sahtu comic format uses, mirroring classifyAllComic:
-  // # page, ## panel, and a beat — which wears no marker at all, since the cue
-  // is what makes it one. Alt+3 therefore clears the line's level.
-  var COMIC_LEVELS = { Digit1: '#', Digit2: '##', Digit3: '' };
+  // The two heading levels the Sahtu comic format uses, mirroring
+  // classifyAllComic: # page and ## panel. A beat wears no marker at all,
+  // since a caps NAME: is what makes it one, so it has no key.
+  var COMIC_LEVELS = { Digit1: '#', Digit2: '##' };
 
   /**
    * Set the caret line's heading level, replacing whatever level it had, so
-   * Alt+2 on a page line makes it a panel. Only the mark moves — the body text
-   * and the caret both stay exactly where they were.
+   * Alt+2 on a page line makes it a panel. The line is the one being edited,
+   * so its marks are text: they are rewritten in place and the caret stays on
+   * its character.
    */
   function setComicLevel(mark) {
     var c = caretLine();
-    if (!c || markOf(c.div) === mark) return false;
-    setMark(c.div, mark);
-    var back = mark === '##' ? 0 : releaseLabel(c.div);
-    placeCaret(c.div, c.offset + back);
+    if (!c) return false;
+    c.offset = raw(c.div, c.offset);
+    if (markOf(c.div)) c.offset += release(c.div);
+    var src = sourceOf(c.div);
+    var m = MARK.exec(src);
+    if (m && m[1] === mark) return false;
+    var old = m ? m[0].length : 0;
+    var head = mark + ' ';
+    setDivText(c.div, head + src.slice(old));
+    placeCaret(c.div, Math.max(head.length, c.offset - old + head.length));
     return true;
   }
 
@@ -620,11 +683,11 @@
     var after = lineText.slice(c.offset);
     var parts = text.replace(/\r\n?/g, '\n').split('\n');
 
+    // One line lands on the line being edited, which keeps its marks as text.
     if (parts.length === 1) {
       setDivText(c.div, before + parts[0] + after);
-      var eaten = (comicMode && before === '' && !markOf(c.div)) ? absorb(c.div) : 0;
       restyle();
-      placeCaret(c.div, Math.max(0, (before + parts[0]).length - eaten));
+      placeCaret(c.div, (before + parts[0]).length);
       return;
     }
 
@@ -704,31 +767,27 @@
   // --- Typing shortcuts ------------------------------------------------------
 
   /**
-   * "# " at the head of a line becomes the page level and the characters
-   * vanish; "## " the panel level. This is the one place typing rewrites a
-   * text node, which the rest of the editor avoids to protect the caret and
-   * IME — it's safe here because it fires only on an ASCII space typed
-   * directly after a line-leading marker (never mid-composition, since the
-   * input handler returns while composing) and puts the caret back by hand.
-   */
-  function absorbTyped() {
-    var c = caretLine();
-    if (!c) return;
-    if (!/^[ \t]*#{1,3} $/.test(c.div.textContent.slice(0, c.offset))) return;
-    var eaten = absorb(c.div);
-    placeCaret(c.div, Math.max(0, c.offset - eaten));
-  }
-
-  /**
    * A cue types its own tab: closing "NOI:" or "NOI (WHISPER):" jumps the
    * caret to the dialogue column so the writer can keep going. Only at the end
    * of a line that hasn't got a tab already, and Backspace takes it straight
    * back if it fires on something meant as prose.
+   *
+   * A space typed straight after the colon is the same gap, written the way
+   * anyone would write it: it becomes the tab, or is dropped when the tab is
+   * already there, so "NOI: Sorry!" lines up without the writer knowing a tab
+   * is involved.
    */
   function autoTab() {
     var c = caretLine();
     if (!c) return;
     var text = c.div.textContent;
+    var gap = /^([^:\n]{1,40}:)(\t?) $/.exec(text.slice(0, c.offset));
+    var rest = text.slice(c.offset);
+    if (gap && isCue(gap[1]) && (gap[2] || rest.indexOf('\t') === -1)) {
+      setDivText(c.div, gap[1] + '\t' + rest);
+      placeCaret(c.div, gap[1].length + 1);
+      return;
+    }
     if (c.offset !== text.length || text.indexOf('\t') !== -1) return;
     if (text.slice(-1) !== ':' || !isCue(text)) return;
     setDivText(c.div, text + '\t');
@@ -750,8 +809,8 @@
    * calls. An edit that changed nothing leaves no step.
    *
    * Typing and plain deleting run together into one step until a pause or a
-   * word ends; everything else (Enter, paste, cut, Tab, a level key, a marker
-   * absorbed, a cue's tab, emphasis) is a step of its own.
+   * word ends; everything else (Enter, paste, cut, Tab, a level key, a cue's
+   * tab, emphasis) is a step of its own.
    */
   var undoStack = [];
   var redoStack = [];
@@ -828,16 +887,18 @@
     rebuild(snap.text);
     var divs = lineDivs();
     var div = divs[Math.min(snap.caret.line, divs.length - 1)];
-    var at = Math.min(Math.max(0, snap.caret.offset - prefixLength(div)), sourceOf(div).length);
-    live = div; // Painted as source, so the offset lands on the right character.
-    repaint(div);
+    // Made the live line, marks and all, so the offset (counted from the head
+    // of the line as getText() writes it) lands on the right character.
+    live = div;
+    release(div);
+    var at = Math.min(Math.max(0, snap.caret.offset), sourceOf(div).length);
+    restyle();
     placeCaret(div, at);
   }
 
   /**
-   * Undo or redo one step. A step whose state looks the same as now is passed
-   * over — a typed "# " restores as an absorbed marker, since that is how the
-   * text reads back — so one key press always visibly changes something.
+   * Undo or redo one step. A step whose state reads back the same as now is
+   * passed over, so one key press always visibly changes something.
    */
   function travel(from, to) {
     if (composing || from.length === 0) return;
@@ -897,7 +958,7 @@
   editor.addEventListener('input', function () {
     if (composing) return;
     settle(); // The typing itself, before anything below rewrites it.
-    if (comicMode) { step('marker', absorbTyped); step('cue-tab', autoTab); }
+    if (comicMode) step('cue-tab', autoTab);
     restyle();
     markDirty();
   });
@@ -919,23 +980,6 @@
       if (key === 'z' || (key === 'y' && e.ctrlKey && !e.metaKey)) {
         e.preventDefault();
         if (key === 'z' && !e.shiftKey) undo(); else redo();
-        return;
-      }
-    }
-
-    // Backspace at the head of a marked line takes the level off instead of
-    // eating into the line above. An invisible marker needs a visible way out,
-    // and this is the same key that would have deleted it when it was text.
-    if (e.key === 'Backspace' && !composing && comicMode) {
-      var c = caretLine();
-      if (c && c.offset === 0 && markOf(c.div) && window.getSelection().isCollapsed) {
-        e.preventDefault();
-        willEdit('level');
-        setMark(c.div, '');
-        releaseLabel(c.div);
-        restyle();
-        placeCaret(c.div, 0);
-        markDirty();
         return;
       }
     }
@@ -966,12 +1010,10 @@
     // Ctrl+digit and Cmd+digit are reserved by browsers for tab switching and
     // can't be preventDefault'd. e.code because Option+1 on macOS reports
     // e.key as '¡'.
-    // hasOwnProperty, not truthiness: the beat level is the empty string.
     if (e.altKey && !e.ctrlKey && !e.metaKey && !composing
-        && Object.prototype.hasOwnProperty.call(COMIC_LEVELS, e.code)
-        && comicMode) {
-      // Unconditionally, before the no-op check: a second Alt+3 on a line
-      // that is already a beat still has to swallow the key, or macOS types £.
+        && COMIC_LEVELS[e.code] && comicMode) {
+      // Unconditionally, before the no-op check: a second Alt+2 on a line
+      // that is already a panel still has to swallow the key, or macOS types ™.
       e.preventDefault();
       willEdit('level');
       if (setComicLevel(COMIC_LEVELS[e.code])) {
@@ -981,9 +1023,9 @@
     }
   });
 
-  // Moving the caret onto a line brings its markers back, and takes them off
-  // the line just left. The caret is remapped as it goes, since the markers
-  // reappearing shifts every character after them.
+  // Moving the caret onto a line brings its markers back, # and ## included,
+  // and takes them off the line just left. The caret is remapped as it goes,
+  // since the markers reappearing shifts every character after them.
   document.addEventListener('selectionchange', function () {
     if (composing || document.activeElement !== editor) return;
     var sel = window.getSelection();
@@ -995,8 +1037,11 @@
     var was = live;
     live = c.div;
     var at = toSource(sourceOf(c.div), c.offset);
-    if (was && was.parentNode === editor) repaint(was);
-    repaint(c.div);
+    if (comicMode) {
+      at += release(c.div);
+      if (was && was.parentNode === editor) absorb(was);
+    }
+    restyle();
     placeCaret(c.div, at);
   });
 

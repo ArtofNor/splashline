@@ -63,6 +63,12 @@ check(preg_match('/\.c-spread::after\s*\{[^}]*counter-increment:\s*cpage/', $sty
 check(str_contains($editor, "'historyUndo'") && str_contains($editor, "'historyRedo'"), "the browser's own undo and redo are routed to the editor's");
 check(preg_match("/function rebuild\(text\)\s*\{\s*comicMode = false;[^}]*build\(text\);/", $editor) === 1, 'rebuild resets comic mode before building, so headings re-absorb');
 check(preg_match('/function markDirty\(\)\s*\{[^}]*settle\(\);/', $editor) === 1, 'every edit settles its undo step in markDirty');
-foreach (['enter', 'paste', 'tab', 'level', 'emphasis', 'marker', 'cue-tab'] as $kind) {
+foreach (['enter', 'paste', 'tab', 'level', 'emphasis', 'cue-tab'] as $kind) {
     check(str_contains($editor, "'" . $kind . "'"), "the {$kind} edit records an undo step");
 }
+
+// The line being edited shows its marks as text: the editor tags it, and the
+// stylesheet swaps the drawn PAGE and PANEL labels for them there.
+check(str_contains($editor, "setAttribute('data-live'"), 'editor tags the line being edited');
+check(preg_match('/\.c-panel\[data-live\]::before\s*\{\s*content:\s*none/', $style) === 1, 'style.css hides the drawn label on the line being edited');
+check(!str_contains($editor, 'Digit3'), 'Alt+3 is gone: a caps NAME: opens a beat on its own');
