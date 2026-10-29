@@ -7,13 +7,15 @@ Splashline is a small, framework-free PHP app for writing in two formats:
 - **Screenplays** in [Fountain](https://fountain.io), rendered as true
   paginated US-Letter pages: 12pt Courier, industry margins, widow and
   orphan control, print-faithful output.
-- **Comic scripts** in the Sahtu format (plain Markdown, three heading
-  levels), rendered as manuscript pages with auto-numbered panels and
+- **Comic scripts** in the Sahtu format (plain Markdown, two heading
+  levels and a cue), rendered as manuscript pages with auto-numbered panels and
   speech balloons, panel-type badges, and lettering-aware checks.
 
 The editor is the page: you type into a live-formatting surface that looks
-like the finished script while the file on disk stays plain text. No build
-step, no database, no dependencies. Your scripts are files you own, and
+like the finished script while the file on disk stays plain text. The line
+you are on shows its marks as typed (`#`, `##`, `**bold**`, the tab after a
+cue), and every other line shows what they make, so the format is learned by
+writing it. No build step, no database, no dependencies. Your scripts are files you own, and
 they diff beautifully in git.
 
 ## Quick start

@@ -243,6 +243,28 @@ main { padding: 2rem 1rem; }
    are, so the asterisks never reach the page. */
 .editor-live .ln.c-panel.c-panel-own::before { content: attr(data-label) ": "; }
 
+/* The line being edited shows what is typed there: its # or ## in place of the
+   drawn label, dimmed so it reads as a mark, and a page heading in the case it
+   was written in. The counters still run on the line itself, so the pages and
+   panels after it keep their numbers. */
+.editor-live .ln.c-page[data-live]::before,
+.editor-live .ln.c-panel[data-live]::before { content: none; }
+.editor-live .ln.c-page[data-live] { text-transform: none; }
+.editor-live .ln .mk { color: #aaa; }
+/* And a cue's tab, which is otherwise only a gap, gets a faint arrow at its
+   start. Drawn by the stylesheet, so it is no character of the file. */
+.editor-live .ln .tab { position: relative; }
+.editor-live .ln .tab::before {
+  content: "\2192";
+  position: absolute;
+  left: 0.4em;
+  /* The beat's hanging indent is inherited, and would pull the arrow 2.2in
+     back to the margin. */
+  text-indent: 0;
+  color: #aaa;
+  pointer-events: none;
+}
+
 /* Enter ends a paragraph, and the blank line it writes is shown as the gap it
    means rather than an empty row. It stays a real line — the caret can sit in
    it and Backspace removes it — just a short one. */
